@@ -1,0 +1,76 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ------------------------------------
+    // Helper Functions
+    // ------------------------------------
+
+    // Check if the request is from an authenticated user
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if the user is an HR user (has a document in hr_users collection)
+    function isHRUser() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/hr_users/$(request.auth.uid));
+    }
+
+    // ------------------------------------
+    // Candidates Collection
+    // ------------------------------------
+    match /candidates/{candidateId} {
+      // Candidates need to be able to read their own document by ID to track progress
+      allow get: if true;
+      allow list, write: if isHRUser();
+    }
+
+    // ------------------------------------
+    // Assessments Collection
+    // ------------------------------------
+    match /assessments/{token} {
+      // HR users can read and write all assessments
+      allow read, write: if isHRUser();
+
+      // Candidates can read their own assessment by token (public read for token-based access)
+      allow read: if true;
+
+      // Anyone can write answers (submission) — validated server-side
+      allow update: if true;
+    }
+
+    // ------------------------------------
+    // Jobs Collection
+    // ------------------------------------
+    match /jobs/{jobId} {
+      // Anyone can read active jobs (for the Apply page job selector)
+      allow read: if true;
+
+      // Only HR users can create, update, delete jobs
+      allow write: if isHRUser();
+    }
+
+    // ------------------------------------
+    // HR Users Collection
+    // ------------------------------------
+    match /hr_users/{uid} {
+      // Users can read their own profile
+      allow read: if isAuthenticated() && request.auth.uid == uid;
+
+      // Only the user themselves or an admin can write
+      allow write: if isAuthenticated() && request.auth.uid == uid;
+    }
+
+    // ------------------------------------
+    // Errors Collection (internal logging)
+    // ------------------------------------
+    match /errors/{errorId} {
+      // Only HR users can read error logs
+      allow read: if isHRUser();
+
+      // Server-side writes only (via Admin SDK)
+      allow write: if false;
+    }
+  }
+}

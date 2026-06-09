@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TalentFlow // Enterprise Recruitment</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --surface: #1a1a1a;
+            --surface-hover: #222222;
+            --border: #2a2a2a;
+            --accent: #6366f1;
+            --accent-soft: rgba(99, 102, 241, 0.1);
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text: #e5e5e5;
+            --muted: #71717a;
+            --sidebar-width: 240px;
+            --transition: 150ms ease;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+        /* Layout */
+        #app {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--bg);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 24px 0;
+            flex-shrink: 0;
+        }
+
+        .main-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            position: relative;
+            background: var(--bg);
+        }
+
+        /* Components */
+        .logo {
+            padding: 0 24px 32px;
+            font-weight: 700;
+            font-size: 18px;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .logo-icon {
+            width: 24px;
+            height: 24px;
+            background: var(--accent);
+            border-radius: 6px;
+        }
+
+        .nav-item {
+            padding: 12px 24px;
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            border-left: 3px solid transparent;
+            transition: var(--transition);
+        }
+        .nav-item:hover {
+            color: var(--text);
+            background: var(--surface-hover);
+        }
+        .nav-item.active {
+            color: var(--accent);
+            background: var(--accent-soft);
+            border-left-color: var(--accent);
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 14px;
+        }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn:disabled { background: var(--muted); cursor: not-allowed; }
+
+        .pill {
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .pill-gray { background: #333; color: #ccc; }
+        .pill-blue { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+        .pill-amber { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+        .pill-purple { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
+        .pill-green { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+        .pill-red { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+
+        /* Dashboard Specific */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 24px;
+        }
+        .stat-card .value { font-size: 28px; font-weight: 700; margin: 8px 0; }
+        .stat-card .trend { font-size: 12px; font-weight: 600; }
+        .trend-up { color: var(--success); }
+
+        .table-container { margin: 0 24px 24px; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { padding: 16px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; }
+        td { padding: 16px; border-bottom: 1px solid var(--border); font-size: 14px; }
+        tr:hover td { background: var(--surface-hover); cursor: pointer; }
+
+        /* Drawer */
+        .drawer-overlay {
+            position: fixed;
+            top: 0; right: 0; bottom: 0; left: 0;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            z-index: 100;
+        }
+        .drawer {
+            position: fixed;
+            top: 0; right: -500px; bottom: 0;
+            width: 450px;
+            background: var(--surface);
+            border-left: 1px solid var(--border);
+            z-index: 101;
+            transition: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 32px;
+            overflow-y: auto;
+        }
+        .drawer.open { right: 0; }
+
+        /* Progress Bar */
+        .progress-bg { height: 6px; background: var(--border); border-radius: 3px; width: 80px; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--accent); transition: width 0.5s ease; }
+
+        /* Application Portal */
+        .portal-container { max-width: 600px; margin: 80px auto; text-align: center; }
+        .upload-zone {
+            border: 2px dashed var(--border);
+            padding: 40px;
+            border-radius: 16px;
+            margin: 24px 0;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+        .upload-zone:hover, .upload-zone.dragover { border-color: var(--accent); background: var(--accent-soft); }
+
+        /* Assessment */
+        .assessment-grid { display: grid; grid-template-columns: 350px 1fr; height: calc(100vh - 0px); }
+        .instructions { padding: 32px; border-right: 1px solid var(--border); overflow-y: auto; }
+        .editor-container { display: flex; flex-direction: column; background: #050505; }
+        .editor-header { padding: 12px 24px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        textarea.code-editor {
+            flex-grow: 1;
+            background: transparent;
+            color: #d4d4d4;
+            padding: 20px;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            border: none;
+            resize: none;
+            outline: none;
+        }
+
+        /* Calendar */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: 80px repeat(5, 1fr);
+            padding: 24px;
+            height: calc(100vh - 100px);
+        }
+        .cal-header { padding: 12px; text-align: center; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 12px; font-weight: 600; }
+        .cal-cell { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); position: relative; min-height: 60px; }
+        .cal-time { font-size: 11px; color: var(--muted); text-align: right; padding-right: 10px; margin-top: -6px; }
+        .interview-block {
+            position: absolute;
+            left: 4px; right: 4px;
+            background: var(--accent-soft);
+            border-left: 3px solid var(--accent);
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            z-index: 2;
+        }
+
+        /* Animation utilities */
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner { width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.1); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <!-- Sidebar will be injected here if not in assessment view -->
+    <aside class="sidebar" id="sidebar">
+        <div class="logo">
+            <div class="logo-icon"></div>
+            TalentFlow
+        </div>
+        <nav>
+            <div class="nav-item" onclick="router.navigate('dashboard')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                Overview
+            </div>
+            <div class="nav-item" onclick="router.navigate('dashboard')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                Candidates
+            </div>
+            <div class="nav-item" onclick="router.navigate('schedule')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                Schedule
+            </div>
+            <div class="nav-item" onclick="router.navigate('apply')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line></svg>
+                Public Portal
+            </div>
+        </nav>
+    </aside>
+
+    <main class="main-content" id="main-view">
+        <!-- Views injected here -->
+    </main>
+
+    <!-- Global Drawer -->
+    <div class="drawer-overlay" id="drawer-overlay"></div>
+    <div class="drawer" id="drawer"></div>
+</div>
+
+<script>
+    /** 
+     * MOCK DATA
+     */
+    const candidates = [
+        { id: 1, name: "Alex Rivera", role: "Senior Frontend Engineer", status: "INTERVIEW_SCHEDULED", score: 92, date: "2023-10-24", email: "alex.r@example.com", phone: "+1 555-0102" },
+        { id: 2, name: "Sarah Chen", role: "Product Designer", status: "ASSESSMENT_SENT", score: 0, date: "2023-10-25", email: "schen@studio.com", phone: "+1 555-0199" },
+        { id: 3, name: "Marcus Thorne", role: "Backend Architect", status: "SCORED", score: 88, date: "2023-10-22", email: "m.thorne@tech.io", phone: "+1 555-0143" },
+        { id: 4, name: "Jordan Smith", role: "Fullstack Developer", status: "AI_SCREENING_PASSED", score: 74, date: "2023-10-26", email: "jsmith@gmail.com", phone: "+1 555-0121" },
+        { id: 5, name: "Elena Rodriguez", role: "Senior Frontend Engineer", status: "APPLIED", score: 0, date: "2023-10-27", email: "elena.rod@dev.com", phone: "+1 555-0188" },
+        { id: 6, name: "David Kim", role: "DevOps Lead", status: "REJECTED", score: 42, date: "2023-10-20", email: "dkim@cloud.net", phone: "+1 555-0177" },
+        { id: 7, name: "Maya Patel", role: "Product Designer", status: "INTERVIEW_SCHEDULED", score: 95, date: "2023-10-24", email: "mp@design.co", phone: "+1 555-0155" },
+        { id: 8, name: "Chris Vance", role: "Backend Architect", status: "SCORED", score: 61, date: "2023-10-23", email: "cv@freelance.com", phone: "+1 555-0133" }
+    ];
+
+    const interviews = [
+        { day: 1, time: "10:00", name: "Alex Rivera", role: "Technical" },
+        { day: 2, time: "14:30", name: "Maya Patel", role: "Portfolio Review" },
+        { day: 4, time: "09:00", name: "Marcus Thorne", role: "System Design" },
+        { day: 5, time: "11:00", name: "Sarah Chen", role: "HR Culture Fit" }
+    ];
+
+    /**
+     * ROUTER ENGINE
+     */
+    const router = {
+        currentRoute: '',
+        navigate(route) {
+            window.location.hash = route;
+        },
+        init() {
+            window.addEventListener('hashchange', () => this.handleRoute());
+            if (!window.location.hash) window.location.hash = 'dashboard';
+            this.handleRoute();
+        },
+        handleRoute() {
+            const path = window.location.hash.slice(1) || 'dashboard';
+            this.currentRoute = path;
+            
+            // Hide sidebar for portal and assessment
+            const sidebar = document.getElementById('sidebar');
+            if (path === 'apply' || path.startsWith('assessment')) {
+                sidebar.style.display = 'none';
+            } else {
+                sidebar.style.display = 'flex';
+                this.updateActiveNav(path);
+            }
+
+            if (path === 'apply') renderApplyPortal();
+            else if (path === 'dashboard') renderDashboard();
+            else if (path === 'schedule') renderSchedule();
+            else if (path.startsWith('assessment')) renderAssessment();
+        },
+        updateActiveNav(path) {
+            document.querySelectorAll('.nav-item').forEach(el => {
+                const text = el.textContent.trim().toLowerCase();
+                el.classList.toggle('active', path.includes(text));
+            });
+        }
+    };
+
+    /**
+     * DASHBOARD VIEW
+     */
+    function renderDashboard() {
+        const view = document.getElementById('main-view');
+        view.innerHTML = `
+            <div class="fade-in">
+                <div class="stats-grid">
+                    ${renderStatCard("Total Applicants", candidates.length, "+12%")}
+                    ${renderStatCard("AI Screened", "154", "+5%")}
+                    ${renderStatCard("Assessments", "42", "+18%")}
+                    ${renderStatCard("Interviews", "12", "+2%")}
+                </div>
+                
+                <div class="table-container card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3 style="font-size: 16px;">Recent Candidates</h3>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" placeholder="Search..." style="background: var(--bg); border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; color: white; font-size: 13px;">
+                        </div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Score</th>
+                                <th>Applied</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="candidate-table-body">
+                            ${candidates.map(c => `
+                                <tr onclick="openCandidate('${c.id}')">
+                                    <td>
+                                        <div style="font-weight: 600;">${c.name}</div>
+                                        <div style="font-size: 12px; color: var(--muted);">${c.email}</div>
+                                    </td>
+                                    <td>${c.role}</td>
+                                    <td>${getStatusPill(c.status)}</td>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <div class="progress-bg"><div class="progress-fill" style="width: ${c.score}%"></div></div>
+                                            <span style="font-size: 12px; font-weight: 600;">${c.score || '--'}</span>
+                                        </div>
+                                    </td>
+                                    <td style="color: var(--muted);">${c.date}</td>
+                                    <td><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+        animateStats();
+    }
+
+    function renderStatCard(label, value, trend) {
+        return `
+            <div class="card stat-card">
+                <div style="color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase;">${label}</div>
+                <div class="value" data-target="${value}">0</div>
+                <div class="trend trend-up">↑ ${trend} <span style="color: var(--muted); font-weight: 400;">vs last month</span></div>
+            </div>
+        `;
+    }
+
+    function getStatusPill(status) {
+        const map = {
+            'APPLIED': 'pill-gray',
+            'AI_SCREENING_PASSED': 'pill-blue',
+            'ASSESSMENT_SENT': 'pill-amber',
+            'SCORED': 'pill-purple',
+            'INTERVIEW_SCHEDULED': 'pill-green',
+            'REJECTED': 'pill-red'
+        };
+        return `<span class="pill ${map[status]}">${status.replace('_', ' ')}</span>`;
+    }
+
+    function animateStats() {
+        document.querySelectorAll('.value').forEach(el => {
+            const target = parseInt(el.dataset.target);
+            if (isNaN(target)) return;
+            let current = 0;
+            const inc = target / 30;
+            const timer = setInterval(() => {
+                current += inc;
+                if (current >= target) {
+                    el.innerText = target;
+                    clearInterval(timer);
+                } else {
+                    el.innerText = Math.floor(current);
+                }
+            }, 20);
+        });
+    }
+
+    /**
+     * DRAWER LOGIC
+     */
+    function openCandidate(id) {
+        const c = candidates.find(can => can.id == id);
+        const drawer = document.getElementById('drawer');
+        const overlay = document.getElementById('drawer-overlay');
+        
+        drawer.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px;">
+                <div>
+                    <h2 style="font-size: 24px; margin-bottom: 4px;">${c.name}</h2>
+                    <div style="color: var(--accent); font-weight: 500;">${c.role}</div>
+                </div>
+                <button onclick="closeDrawer()" style="background: none; border: none; color: var(--muted); cursor: pointer;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+
+            <div style="margin-bottom: 32px;">
+                <div style="font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 12px; font-weight: 600;">Details</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div class="card" style="padding: 12px;">
+                        <div style="font-size: 11px; color: var(--muted);">Status</div>
+                        <div style="margin-top: 4px;">${getStatusPill(c.status)}</div>
+                    </div>
+                    <div class="card" style="padding: 12px;">
+                        <div style="font-size: 11px; color: var(--muted);">AI Score</div>
+                        <div style="font-size: 18px; font-weight: 700; color: var(--accent);">${c.score || 'N/A'}/100</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 32px;">
+                <div style="font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 12px; font-weight: 600;">Timeline</div>
+                <div style="border-left: 2px solid var(--border); margin-left: 8px; padding-left: 20px;">
+                    <div style="position: relative; margin-bottom: 20px;">
+                        <div style="position: absolute; left: -27px; top: 4px; width: 12px; height: 12px; border-radius: 50%; background: var(--success);"></div>
+                        <div style="font-size: 14px; font-weight: 600;">Application Received</div>
+                        <div style="font-size: 12px; color: var(--muted);">${c.date}</div>
+                    </div>
+                    <div style="position: relative; margin-bottom: 20px;">
+                        <div style="position: absolute; left: -27px; top: 4px; width: 12px; height: 12px; border-radius: 50%; background: var(--accent);"></div>
+                        <div style="font-size: 14px; font-weight: 600;">AI Screening Completed</div>
+                        <div style="font-size: 12px; color: var(--muted);">Score: ${c.score}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div style="font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 12px; font-weight: 600;">Parsed CV Data</div>
+                <pre style="background: var(--bg); padding: 16px; border-radius: 8px; font-size: 12px; color: #888; overflow-x: auto; border: 1px solid var(--border);">
+{
+  "skills": ["React", "TypeScript", "Node.js"],
+  "experience": "8+ years",
+  "location": "Remote",
+  "education": "BS Computer Science"
+}</pre>
+            </div>
+            
+            <div style="margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <button class="btn">Move to Next Stage</button>
+                <button class="btn" style="background: var(--surface); border: 1px solid var(--border);">Reject</button>
+            </div>
+        `;
+
+        overlay.style.display = 'block';
+        setTimeout(() => drawer.classList.add('open'), 10);
+    }
+
+    function closeDrawer() {
+        const drawer = document.getElementById('drawer');
+        const overlay = document.getElementById('drawer-overlay');
+        drawer.classList.remove('open');
+        setTimeout(() => overlay.style.display = 'none', 300);
+    }
+
+    document.getElementById('drawer-overlay').onclick = closeDrawer;
+
+    /**
+     * APPLY PORTAL VIEW
+     */
+    function renderApplyPortal() {
+        const view = document.getElementById('main-view');
+        view.innerHTML = `
+            <div class="portal-container fade-in">
+                <div style="margin-bottom: 40px;">
+                    <div class="logo-icon" style="margin: 0 auto 20px; width: 48px; height: 48px;"></div>
+                    <h1 style="font-size: 32px; margin-bottom: 8px;">Senior Frontend Engineer</h1>
+                    <p style="color: var(--muted);">TalentFlow Systems • San Francisco / Remote</p>
+                </div>
+
+                <div class="card" id="apply-card">
+                    <h3 style="margin-bottom: 24px; text-align: left;">Submit your application</h3>
+                    <div class="upload-zone" id="drop-zone">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--muted); margin-bottom: 16px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        <p style="font-weight: 500;">Drag and drop your CV</p>
+                        <p style="font-size: 13px; color: var(--muted); margin-top: 4px;">PDF or DOCX (max 5MB)</p>
+                        <input type="file" id="file-input" hidden accept=".pdf,.docx">
+                    </div>
+                    <div id="file-preview" style="display: none; margin-bottom: 20px; text-align: left; padding: 12px; background: var(--bg); border-radius: 8px; border: 1px solid var(--border);">
+                        <div style="font-weight: 600; font-size: 14px;" id="file-name">filename.pdf</div>
+                        <div style="font-size: 12px; color: var(--muted);" id="file-size">1.2 MB</div>
+                    </div>
+                    <button class="btn" style="width: 100%;" id="submit-app" disabled>Submit Application</button>
+                </div>
+            </div>
+        `;
+
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const submitBtn = document.getElementById('submit-app');
+        const preview = document.getElementById('file-preview');
+
+        dropZone.onclick = () => fileInput.click();
+        
+        fileInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('file-name').innerText = file.name;
+                document.getElementById('file-size').innerText = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+                preview.style.display = 'block';
+                submitBtn.disabled = false;
+            }
+        };
+
+        submitBtn.onclick = async () => {
+            const card = document.getElementById('apply-card');
+            const states = ["Uploading…", "Parsing CV…", "Running AI Screening…", "Finalizing…"];
+            
+            for (let state of states) {
+                card.innerHTML = `
+                    <div style="padding: 40px 0;">
+                        <div class="spinner" style="width: 40px; height: 40px; margin: 0 auto 24px;"></div>
+                        <h3 style="margin-bottom: 8px;">${state}</h3>
+                        <p style="color: var(--muted);">Please don't close this window.</p>
+                    </div>
+                `;
+                await new Promise(r => setTimeout(r, 1200));
+            }
+
+            const success = Math.random() > 0.4;
+            if (success) {
+                card.innerHTML = `
+                    <div style="padding: 20px 0;">
+                        <div style="width: 60px; height: 60px; background: var(--success); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px;">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        </div>
+                        <h2 style="margin-bottom: 12px;">Congratulations!</h2>
+                        <p style="color: var(--muted); line-height: 1.6;">Your background matches our requirements. We've sent an invitation for a technical assessment to your email.</p>
+                        <button class="btn" style="margin-top: 24px;" onclick="router.navigate('assessment/tk-992')">Take Assessment Now</button>
+                    </div>
+                `;
+            } else {
+                card.innerHTML = `
+                    <div style="padding: 20px 0;">
+                        <h2 style="margin-bottom: 12px;">Thank you for applying</h2>
+                        <p style="color: var(--muted); line-height: 1.6;">Our team has received your application. We will review it and get back to you within 3-5 business days.</p>
+                        <button class="btn" style="margin-top: 24px; background: var(--surface); border: 1px solid var(--border);" onclick="location.reload()">Back to Home</button>
+                    </div>
+                `;
+            }
+        };
+    }
+
+    /**
+     * ASSESSMENT VIEW
+     */
+    function renderAssessment() {
+        const view = document.getElementById('main-view');
+        view.innerHTML = `
+            <div class="assessment-grid fade-in">
+                <div class="instructions">
+                    <div style="margin-bottom: 32px;">
+                        <div class="logo-icon" style="width: 32px; height: 32px; margin-bottom: 16px;"></div>
+                        <h2 style="font-size: 20px;">Technical Assessment</h2>
+                        <p style="font-size: 14px; color: var(--muted); margin-top: 4px;">Frontend Engineering Track</p>
+                    </div>
+                    
+                    <div class="card" style="margin-bottom: 24px; border-color: var(--accent);">
+                        <div style="font-size: 11px; color: var(--muted); text-transform: uppercase;">Time Remaining</div>
+                        <div style="font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums;" id="timer">45:00</div>
+                    </div>
+
+                    <div style="font-size: 14px; line-height: 1.6;">
+                        <h4 style="margin-bottom: 12px;">The Challenge</h4>
+                        <p style="margin-bottom: 12px;">Implement a <code style="color: var(--accent);">useDebounce</code> custom hook in React that delays updating a value until after a specified delay.</p>
+                        <ul style="margin-left: 20px; color: var(--muted);">
+                            <li>Should handle generic values</li>
+                            <li>Should cleanup timeouts</li>
+                            <li>Should update immediately if delay is 0</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="editor-container">
+                    <div class="editor-header">
+                        <div style="font-size: 13px; font-weight: 600; color: var(--muted);">useDebounce.tsx</div>
+                        <button class="btn" id="submit-assessment">Submit Code</button>
+                    </div>
+                    <textarea class="code-editor" spellcheck="false">
+import { useState, useEffect } from 'react';
+
+/**
+ * Custom hook to debounce a value
+ */
+export function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    // Write your implementation here...
+    
+  }, [value, delay]);
+
+  return debouncedValue;
+}</textarea>
+                </div>
+            </div>
+        `;
+
+        // Simple Timer
+        let time = 45 * 60;
+        const timerEl = document.getElementById('timer');
+        const interval = setInterval(() => {
+            time--;
+            const mins = Math.floor(time / 60);
+            const secs = time % 60;
+            timerEl.innerText = `${mins}:${secs.toString().padStart(2, '0')}`;
+            if (time <= 0) clearInterval(interval);
+        }, 1000);
+
+        document.getElementById('submit-assessment').onclick = async () => {
+            const btn = document.getElementById('submit-assessment');
+            btn.disabled = true;
+            btn.innerText = "Submitting...";
+
+            const states = ["Running test cases...", "Calculating score...", "Generating report..."];
+            for (let s of states) {
+                btn.innerText = s;
+                await new Promise(r => setTimeout(r, 1000));
+            }
+
+            view.innerHTML = `
+                <div class="portal-container fade-in">
+                    <div class="card" style="padding: 40px;">
+                        <h2 style="margin-bottom: 8px;">Assessment Completed</h2>
+                        <div style="font-size: 64px; font-weight: 800; color: var(--success); margin: 24px 0;">88<span style="font-size: 24px; color: var(--muted);">/100</span></div>
+                        <div class="pill pill-green" style="margin-bottom: 32px; display: inline-block;">Passed</div>
+                        
+                        <div style="text-align: left; margin-bottom: 32px;">
+                            <div style="margin-bottom: 12px; display: flex; justify-content: space-between;">
+                                <span>Logic & Efficiency</span>
+                                <span style="font-weight: 600;">95%</span>
+                            </div>
+                            <div style="margin-bottom: 12px; display: flex; justify-content: space-between;">
+                                <span>Edge Case Handling</span>
+                                <span style="font-weight: 600;">80%</span>
+                            </div>
+                            <div style="margin-bottom: 12px; display: flex; justify-content: space-between;">
+                                <span>Code Readability</span>
+                                <span style="font-weight: 600;">90%</span>
+                            </div>
+                        </div>
+
+                        <p style="color: var(--muted); margin-bottom: 24px;">Our HR team will reach out within 24 hours to schedule your interview.</p>
+                        <button class="btn" onclick="router.navigate('dashboard')">Return to Dashboard</button>
+                    </div>
+                </div>
+            `;
+        };
+    }
+
+    /**
+     * SCHEDULE VIEW
+     */
+    function renderSchedule() {
+        const view = document.getElementById('main-view');
+        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+        const hours = [9, 10, 11, 12, 13, 14, 15, 16, 17];
+
+        view.innerHTML = `
+            <div class="fade-in">
+                <div style="padding: 24px 24px 0;">
+                    <h2 style="font-size: 20px; margin-bottom: 4px;">Interview Schedule</h2>
+                    <p style="color: var(--muted); font-size: 14px;">Week of Oct 23, 2023</p>
+                </div>
+                <div class="calendar-grid">
+                    <div class="cal-header"></div>
+                    ${days.map(d => `<div class="cal-header">${d}</div>`).join('')}
+                    
+                    ${hours.map(h => `
+                        <div class="cal-time">${h}:00</div>
+                        ${[1,2,3,4,5].map(d => {
+                            const interview = interviews.find(i => i.day === d && parseInt(i.time) === h);
+                            return `
+                                <div class="cal-cell">
+                                    ${interview ? `
+                                        <div class="interview-block" onclick="alert('Interview with ${interview.name}')">
+                                            <div style="font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${interview.name}</div>
+                                            <div style="font-size: 10px; opacity: 0.8;">${interview.role}</div>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            `;
+                        }).join('')}
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    // Initialize App
+    router.init();
+</script>
+</body>
+</html>

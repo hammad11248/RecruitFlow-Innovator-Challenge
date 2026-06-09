@@ -1,0 +1,43 @@
+# FastAPI & Server
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+
+# Firebase Admin SDK
+firebase-admin==6.6.0
+
+# Celery & Redis
+celery==5.4.0
+redis==5.2.1
+
+# AI - Anthropic Claude
+anthropic==0.42.0
+
+# Document Parsing
+pdfplumber==0.11.4
+python-docx==1.1.2
+
+# Email - SendGrid
+sendgrid==6.11.0
+
+# Google Calendar API
+google-api-python-client==2.159.0
+google-auth==2.37.0
+google-auth-oauthlib==1.2.1
+google-auth-httplib2==0.2.0
+
+# Data Validation
+pydantic==2.10.3
+pydantic-settings==2.7.1
+
+# JWT Tokens
+python-jose[cryptography]==3.3.0
+
+# HTTP Client
+httpx==0.28.1
+
+# CORS
+starlette==0.41.3
+
+# Utilities
+python-dateutil==2.9.0

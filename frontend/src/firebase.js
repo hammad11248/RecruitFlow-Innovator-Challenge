@@ -1,0 +1,235 @@
+import { initializeApp } from 'firebase/app'
+import { getFirestore, collection as realCollection, query as realQuery, onSnapshot as realOnSnapshot, doc as realDoc, where as realWhere, orderBy as realOrderBy, limit as realLimit } from 'firebase/firestore'
+import { getStorage, ref as realRef, uploadBytesResumable as realUploadBytesResumable, getDownloadURL as realGetDownloadURL } from 'firebase/storage'
+import { getAuth, onAuthStateChanged as realOnAuthStateChanged, signInWithEmailAndPassword as realSignInWithEmailAndPassword, signOut as realSignOut } from 'firebase/auth'
+import axios from 'axios'
+
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+}
+
+// Check if we are running in Mock/Demo mode
+const isMockMode = !firebaseConfig.apiKey || firebaseConfig.apiKey.includes('your-') || firebaseConfig.apiKey === '';
+
+let app = null;
+let realDb = null;
+let realStorage = null;
+let realAuth = null;
+
+if (!isMockMode) {
+  try {
+    app = initializeApp(firebaseConfig)
+    realDb = getFirestore(app)
+    realStorage = getStorage(app)
+    realAuth = getAuth(app)
+  } catch (err) {
+    console.warn("Failed to initialize real Firebase SDK, falling back to mock mode:", err)
+  }
+}
+
+
+// ---------------------------------------------------------------------------
+// Mock Implementations for Offline/Demo Mode
+// ---------------------------------------------------------------------------
+
+const BACKEND_URL = import.meta.env.VITE_API_URL || 
+  (window.location.port === '5173' ? 'http://localhost:8000/api' : '/api');
+
+// Simple pub-sub for mock auth state
+const authListeners = new Set();
+let mockUser = localStorage.getItem('mock_user') 
+  ? { email: localStorage.getItem('mock_user'), uid: 'mock-hr-uid' }
+  : null;
+
+const triggerAuthStateChanged = () => {
+  authListeners.forEach(cb => cb(mockUser));
+};
+
+// Mock Auth
+const mockAuth = {
+  currentUser: mockUser
+};
+
+const mockOnAuthStateChanged = (authObj, callback) => {
+  authListeners.add(callback);
+  // Trigger initial call
+  setTimeout(() => callback(mockUser), 0);
+  return () => authListeners.delete(callback);
+};
+
+const mockSignInWithEmailAndPassword = async (authObj, email, password) => {
+  // Simulate API delay
+  await new Promise(r => setTimeout(r, 600));
+  if (!email || !password) throw new Error("Invalid credentials");
+  mockUser = { email, uid: 'mock-hr-uid' };
+  localStorage.setItem('mock_user', email);
+  triggerAuthStateChanged();
+  return { user: mockUser };
+};
+
+const mockSignOut = async (authObj) => {
+  await new Promise(r => setTimeout(r, 300));
+  mockUser = null;
+  localStorage.removeItem('mock_user');
+  triggerAuthStateChanged();
+};
+
+// Mock Storage
+const mockStorage = {};
+
+const mockRef = (storageObj, path) => {
+  return { path };
+};
+
+const mockUploadBytesResumable = (refObj, file) => {
+  let progressCallback = () => {};
+  let successCallback = () => {};
+  
+  const triggerUpload = async () => {
+    // Simulate progress increments
+    const stages = [15, 45, 80, 100];
+    for (let p of stages) {
+      await new Promise(r => setTimeout(r, 150));
+      progressCallback({
+        bytesTransferred: p,
+        totalBytes: 100
+      });
+    }
+    successCallback();
+  };
+  
+  setTimeout(triggerUpload, 50);
+
+  return {
+    on: (stateName, progCb, errCb, successCb) => {
+      progressCallback = progCb;
+      successCallback = successCb;
+    }
+  };
+};
+
+const mockGetDownloadURL = async (refObj) => {
+  // Return the mock storage download link
+  return `${BACKEND_URL}/mock/cv/${refObj.path}`;
+};
+
+// Mock Firestore
+const mockDb = {};
+
+const mockDoc = (dbObj, collectionName, id) => {
+  return { collectionName, id };
+};
+
+const mockCollection = (dbObj, collectionName) => {
+  return { collectionName };
+};
+
+const mockQuery = (colRef, ...constraints) => {
+  return { ...colRef, constraints };
+};
+
+const mockWhere = (field, op, val) => ({ type: 'where', field, op, val });
+const mockOrderBy = (field, dir) => ({ type: 'orderBy', field, dir });
+const mockLimit = (val) => ({ type: 'limit', val });
+
+const mockOnSnapshot = (queryOrRef, onNext, onError) => {
+  let active = true;
+  let intervalId = null;
+
+  const pollData = async () => {
+    if (!active) return;
+    try {
+      if (queryOrRef.id) {
+        // Fetch single document (candidate or assessment)
+        const isCandidate = queryOrRef.collectionName === 'candidates';
+        const endpoint = isCandidate 
+          ? `/candidates/${queryOrRef.id}`
+          : `/assessments/${queryOrRef.id}`;
+        
+        const res = await axios.get(`${BACKEND_URL}${endpoint}`);
+        if (!active) return;
+        
+        onNext({
+          exists: () => true,
+          id: queryOrRef.id,
+          data: () => res.data
+        });
+      } else {
+        // Fetch collection (candidates)
+        const params = {};
+        if (queryOrRef.constraints) {
+          const statusConstraint = queryOrRef.constraints.find(c => c.field === 'status');
+          if (statusConstraint) params.status = statusConstraint.val;
+          
+          const jobConstraint = queryOrRef.constraints.find(c => c.field === 'jobId');
+          if (jobConstraint) params.jobId = jobConstraint.val;
+        }
+
+        const res = await axios.get(`${BACKEND_URL}/candidates`, { params });
+        if (!active) return;
+        
+        const docs = (res.data.candidates || []).map(c => ({
+          id: c.id,
+          data: () => c
+        }));
+        
+        onNext({
+          docs,
+          forEach: (cb) => docs.forEach(cb)
+        });
+      }
+    } catch (err) {
+      if (active && onError) {
+        onError(err);
+      }
+    }
+  };
+
+  // Perform initial fetch immediately
+  pollData();
+  
+  // Set up polling interval
+  intervalId = setInterval(pollData, 2500);
+
+  return () => {
+    active = false;
+    if (intervalId) clearInterval(intervalId);
+  };
+};
+
+// ---------------------------------------------------------------------------
+// Unified Exports
+// ---------------------------------------------------------------------------
+
+export { app }
+export const db = isMockMode ? mockDb : realDb;
+export const storage = isMockMode ? mockStorage : realStorage;
+export const auth = isMockMode ? mockAuth : realAuth;
+
+
+
+// Firestore functions
+export const collection = isMockMode ? mockCollection : realCollection;
+export const query = isMockMode ? mockQuery : realQuery;
+export const doc = isMockMode ? mockDoc : realDoc;
+export const where = isMockMode ? mockWhere : realWhere;
+export const orderBy = isMockMode ? mockOrderBy : realOrderBy;
+export const limit = isMockMode ? mockLimit : realLimit;
+export const onSnapshot = isMockMode ? mockOnSnapshot : realOnSnapshot;
+
+// Storage functions
+export const ref = isMockMode ? mockRef : realRef;
+export const uploadBytesResumable = isMockMode ? mockUploadBytesResumable : realUploadBytesResumable;
+export const getDownloadURL = isMockMode ? mockGetDownloadURL : realGetDownloadURL;
+
+// Auth functions
+export const onAuthStateChanged = isMockMode ? mockOnAuthStateChanged : realOnAuthStateChanged;
+export const signInWithEmailAndPassword = isMockMode ? mockSignInWithEmailAndPassword : realSignInWithEmailAndPassword;
+export const signOut = isMockMode ? mockSignOut : realSignOut;
+
+export default app;

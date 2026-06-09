@@ -1,0 +1,33 @@
+# Environments & Binaries
+python312/
+venv/
+.env
+.env.local
+.env.*.local
+*.pyc
+__pycache__/
+.pytest_cache/
+
+# Node modules & builds
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+.eslintcache
+
+# Local database & Storage (Firebase offline mocks)
+backend/mock_db.json
+backend/mock_storage/
+
+# Credentials & Service accounts
+serviceAccountKey.json
+calendar_credentials.json
+*.json.key
+
+# IDEs & System files
+.vscode/
+.idea/
+.gemini/
+Thumbs.db
+.DS_Store
+*.log

@@ -1,0 +1,82 @@
+version: "3.9"
+
+services:
+  # FastAPI Backend
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app/backend
+      - ./frontend/dist:/app/frontend/dist:ro
+      - ./serviceAccountKey.json:/app/serviceAccountKey.json:ro
+      - ./calendar_credentials.json:/app/calendar_credentials.json:ro
+
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - hr-network
+
+  # Celery Worker
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A backend.celery_app worker --loglevel=info --concurrency=4
+    volumes:
+      - ./backend:/app/backend
+      - ./serviceAccountKey.json:/app/serviceAccountKey.json:ro
+      - ./calendar_credentials.json:/app/calendar_credentials.json:ro
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - hr-network
+
+  # Celery Beat (periodic tasks — engagement deadline checker)
+  beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A backend.celery_app beat --loglevel=info
+    volumes:
+      - ./backend:/app/backend
+      - ./serviceAccountKey.json:/app/serviceAccountKey.json:ro
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - hr-network
+
+  # Redis (Celery broker)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    networks:
+      - hr-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  redis-data:
+
+networks:
+  hr-network:
+    driver: bridge
