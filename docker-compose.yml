@@ -6,22 +6,27 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app/backend
       - ./frontend/dist:/app/frontend/dist:ro
+      # Mount credential files only if they exist locally
       - ./serviceAccountKey.json:/app/serviceAccountKey.json:ro
-      - ./calendar_credentials.json:/app/calendar_credentials.json:ro
-
     env_file:
       - .env
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - hr-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # Celery Worker
   worker:
@@ -32,11 +37,11 @@ services:
     volumes:
       - ./backend:/app/backend
       - ./serviceAccountKey.json:/app/serviceAccountKey.json:ro
-      - ./calendar_credentials.json:/app/calendar_credentials.json:ro
     env_file:
       - .env
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - hr-network
@@ -53,7 +58,8 @@ services:
     env_file:
       - .env
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - hr-network

@@ -1,246 +1,241 @@
-# HR Recruitment Funnel — Enterprise SaaS
+# RecruitFlow 🚀
+**Autonomous AI-Powered HR Recruitment Pipeline**
 
-End-to-end automated HR recruitment pipeline with AI-powered candidate screening, technical assessment, and interview scheduling.
+> End-to-end candidate ingestion, 6-dimension AI scoring, assessment portal, and interview scheduling — powered by Google Gemini, Firebase Firestore, and FastAPI.
 
-## Architecture
+---
+
+## ✨ Features
+
+- 📄 **CV Ingestion** — Drag-and-drop PDF upload with Gemini AI parsing
+- 🧠 **6-Dimension AI Scoring** — Technical Skills, Experience, Assessment, Communication, Cultural Fit, Engagement
+- 📊 **Live Dashboard** — Real-time candidate pipeline with score visualization
+- 📝 **Assessment Portal** — Token-gated coding + MCQ assessments
+- 📅 **Interview Scheduling** — Google Calendar integration
+- 📧 **Email Notifications** — Gmail SMTP (free tier)
+- 🔐 **Firebase Auth** — HR user authentication
+- ⚡ **Bulk Import** — CSV dataset ingestion via `/api/candidates/bulk-import`
+- 🛡️ **Mock Mode** — Runs fully offline with local JSON mock database
+
+---
+
+## 🏗️ Architecture
 
 ```
-┌─────────────────────┐     ┌──────────────────┐     ┌──────────────────┐
-│   React Frontend    │────▶│   FastAPI Backend │────▶│ Firebase Firestore│
-│  (Vite + Tailwind)  │     │   (Python 3.11)  │     │  (Admin SDK)     │
-│                     │     │                  │     │                  │
-│ • /apply            │     │ • /api/candidates│     │ • candidates/    │
-│ • /dashboard        │     │ • /api/assessments│    │ • assessments/   │
-│ • /assessment/:token│     │ • /api/schedule  │     │ • jobs/          │
-│ • /schedule         │     │ • /api/jobs      │     │ • hr_users/      │
-│ • /login            │     └───────┬──────────┘     │ • errors/        │
-│                     │             │                 └──────────────────┘
-│ Firebase JS SDK v9  │     ┌───────▼──────────┐
-│ • onSnapshot        │     │   Celery + Redis │     ┌──────────────────┐
-│ • uploadBytes       │     │                  │────▶│  Claude AI API   │
-│ • Firebase Auth     │     │ Task Chain:      │     │  (Anthropic)     │
-└─────────────────────┘     │ parse → screen → │     └──────────────────┘
-                            │ assess → notify  │
-                            └──────────────────┘     ┌──────────────────┐
-                                                     │  Firebase Storage│
-                                                     │  (CV uploads)    │
-                                                     └──────────────────┘
+React Frontend (Vite + Tailwind)
+        │  axios HTTP
+        ▼
+FastAPI Backend (Python 3.12)
+        │
+        ├──▶ Firebase Firestore (candidate data)
+        ├──▶ Firebase Storage (CV files)
+        ├──▶ Google Gemini AI (CV parsing + scoring)
+        ├──▶ Gmail SMTP (email notifications)
+        ├──▶ Google Calendar API (scheduling)
+        └──▶ Celery + Redis (async task queue)
 ```
 
-## 6-Dimension Scoring Rubric
+---
 
-| Dimension | Weight | Method |
-|-----------|--------|--------|
-| Technical Skills Match | 30% | Claude semantic matching against job.requiredSkills |
-| Experience & Seniority | 20% | Years, seniority level, domain, leadership signals |
-| Assessment Performance | 25% | MCQ + Coding + Open-ended with speed/resubmission modifiers |
-| CV Quality & Communication | 10% | Claude holistic evaluation |
-| Cultural & Role Fit | 10% | Claude persona matching against job.rolePersonaPrompt |
-| Response Time & Engagement | 5% | Time-delta scoring (<24h=100, 24-48h=75, etc.) |
+## 🔧 Tech Stack
 
-## Prerequisites
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18, Vite, Tailwind CSS, Firebase JS SDK |
+| Backend | FastAPI, Python 3.12, Pydantic v2 |
+| Database | Firebase Firestore |
+| Storage | Firebase Storage |
+| AI Engine | Google Gemini (free tier) |
+| Email | Gmail SMTP |
+| Task Queue | Celery + Redis |
+| Auth | Firebase Authentication |
+| Deployment | Docker, Railway (API), Vercel (Frontend) |
 
-- **Node.js** v20+ and npm
-- **Python** 3.11+
-- **Docker** & Docker Compose
-- **Firebase** project with Firestore, Storage, and Auth enabled
-- **Redis** (included via Docker Compose)
+---
 
-## Firebase Project Setup
+## 🚀 Quick Start
 
-### 1. Create Firebase Project
+### Prerequisites
 
-1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. Create a new project (or use an existing one)
-3. Enable **Firestore Database** (production mode)
-4. Enable **Storage** (production mode)
-5. Enable **Authentication** → Email/Password provider
+- Node.js v20+
+- Python 3.12+
+- A [Firebase project](https://console.firebase.google.com/) with Firestore + Storage + Auth enabled
+- A free [Gemini API key](https://aistudio.google.com/)
 
-### 2. Generate Service Account Key
-
-1. Firebase Console → Project Settings → Service Accounts
-2. Click "Generate new private key"
-3. Save the JSON file as `serviceAccountKey.json` in the project root
-
-### 3. Get Frontend Config
-
-1. Firebase Console → Project Settings → General → Your Apps
-2. Add a Web App, copy the config object
-3. Fill in the `VITE_FIREBASE_*` variables in your `.env`
-
-### 4. Create HR User
-
-1. Firebase Console → Authentication → Users → Add User
-2. Create an HR admin user with email/password
-3. In Firestore, manually create a document at `hr_users/{uid}` with:
-   ```json
-   { "role": "admin", "email": "hr@company.com" }
-   ```
-
-## Environment Variables
-
-Copy `.env.example` to `.env` and fill in all values:
+### 1. Clone & Configure
 
 ```bash
+git clone https://github.com/your-username/recruitflow.git
+cd recruitflow
+
+# Copy environment template and fill in your values
 cp .env.example .env
 ```
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `FIREBASE_SERVICE_ACCOUNT_PATH` | Path to service account JSON | ✅ |
-| `FIREBASE_STORAGE_BUCKET` | Storage bucket name | ✅ |
-| `VITE_FIREBASE_*` | Frontend Firebase config (6 vars) | ✅ |
-| `ANTHROPIC_API_KEY` | Anthropic Claude API key | ✅ |
-| `SENDGRID_API_KEY` | SendGrid email API key | ✅ |
-| `SENDGRID_FROM_EMAIL` | Sender email address | ✅ |
-| `GOOGLE_CALENDAR_CREDENTIALS_PATH` | Calendar OAuth2 credentials | Optional |
-| `GOOGLE_CALENDAR_ID` | Calendar ID for scheduling | Optional |
-| `REDIS_URL` | Redis connection URL | ✅ |
-| `JWT_SECRET_KEY` | Secret for assessment tokens | ✅ |
+Open `.env` and fill in:
+- `VITE_FIREBASE_*` — from Firebase Console → Project Settings
+- `GEMINI_API_KEY` — from [Google AI Studio](https://aistudio.google.com/)
+- `EMAIL_USER` / `EMAIL_PASS` — your Gmail + [App Password](https://support.google.com/accounts/answer/185833)
+- `FIREBASE_SERVICE_ACCOUNT_PATH` — path to your downloaded `serviceAccountKey.json`
+- `FIREBASE_STORAGE_BUCKET` — your Firebase storage bucket name
 
-## Quick Start
+### 2. Place Service Account Key
 
-### Docker (Recommended)
+Download your Firebase service account key from:
+**Firebase Console → Project Settings → Service Accounts → Generate new private key**
+
+Save it as `serviceAccountKey.json` in the project root.
+
+### 3. Run with Docker (Recommended)
 
 ```bash
-# Start all services (FastAPI, Celery worker, Celery beat, Redis)
+# Start backend + Redis + Celery workers
 docker-compose up --build
 
-# In another terminal, start the frontend
+# In a new terminal, start the frontend dev server
 cd frontend
 npm install
 npm run dev
 ```
 
-### Manual
-
-```bash
-# Terminal 1: Redis
-redis-server
-
-# Terminal 2: FastAPI
-cd backend
-pip install -r requirements.txt
-uvicorn backend.main:app --reload --port 8000
-
-# Terminal 3: Celery Worker
-celery -A backend.celery_app worker --loglevel=info
-
-# Terminal 4: Celery Beat (for engagement deadline checks)
-celery -A backend.celery_app beat --loglevel=info
-
-# Terminal 5: Frontend
-cd frontend
-npm install
-npm run dev
-```
-
-Application will be available at:
 - **Frontend**: http://localhost:5173
 - **API Docs**: http://localhost:8000/api/docs
-- **API ReDoc**: http://localhost:8000/api/redoc
 
-## Project Structure
+### 4. Run Manually (Development)
+
+```bash
+# Terminal 1 — Backend
+pip install -r backend/requirements.txt
+python -m uvicorn backend.main:app --host 127.0.0.1 --port 8001 --reload
+
+# Terminal 2 — Frontend
+cd frontend
+npm install
+npm run dev
+
+# Optional: Terminal 3 — Celery Worker (for async pipeline)
+celery -A backend.celery_app worker --loglevel=info
+```
+
+### 5. Bulk Import Test Data
+
+```bash
+# Import 1000 synthetic candidates from the CSV dataset
+python -u backend/bulk_import.py
+```
+
+---
+
+## ☁️ Deployment
+
+### Backend → [Railway](https://railway.app)
+
+1. Connect your GitHub repo at Railway
+2. Set **Root Directory** to `/` (project root)
+3. Railway auto-detects `railway.toml` and uses `backend/Dockerfile`
+4. Add all environment variables from `.env.example` in Railway's dashboard
+5. Upload `serviceAccountKey.json` contents as a `FIREBASE_SERVICE_ACCOUNT_JSON` env var (see `firebase_admin_init.py` for inline JSON support)
+
+### Frontend → [Vercel](https://vercel.com)
+
+1. Connect your GitHub repo at Vercel
+2. Set **Root Directory** to `frontend/`
+3. Vercel auto-detects `vercel.json` — no extra config needed
+4. Add these environment variables in Vercel's dashboard:
+   - All `VITE_FIREBASE_*` variables
+   - `VITE_API_URL=https://your-railway-api.railway.app`
+
+---
+
+## 📡 API Reference
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/api/health` | None | Health check |
+| `POST` | `/api/candidates/upload` | None | Upload PDF CV |
+| `POST` | `/api/candidates/bulk-import` | None | Bulk import JSON list |
+| `GET` | `/api/candidates` | Bearer token | List candidates |
+| `GET` | `/api/candidates/{id}` | Bearer token | Get candidate details |
+| `POST` | `/api/assessments/submit` | None | Submit assessment |
+| `GET` | `/api/assessments/{token}` | None | Get assessment by token |
+| `GET` | `/api/schedule` | Bearer token | Get interview slots |
+| `POST` | `/api/schedule` | Bearer token | Book interview slot |
+| `GET` | `/api/jobs` | Bearer token | List jobs |
+| `POST` | `/api/jobs` | Bearer token | Create job |
+
+**Interactive API docs**: `http://localhost:8001/api/docs`
+
+---
+
+## 🧮 6-Dimension Scoring Rubric
+
+| Dimension | Description |
+|-----------|-------------|
+| **Technical Skills** | Gemini AI matches CV skills vs job requirements |
+| **Experience** | Seniority level, years, domain expertise |
+| **Assessment** | MCQ + coding + open-ended test performance |
+| **Communication** | CV quality, language clarity |
+| **Cultural Fit** | Role persona matching |
+| **Engagement** | Response speed and interaction quality |
+
+---
+
+## 📁 Project Structure
 
 ```
 ├── backend/
 │   ├── main.py                    # FastAPI app entry point
-│   ├── config.py                  # Pydantic settings
-│   ├── firebase_admin_init.py     # Firebase Admin SDK singleton
-│   ├── celery_app.py              # Celery configuration
+│   ├── config.py                  # Pydantic settings (all env vars)
+│   ├── firebase_admin_init.py     # Firebase Admin SDK + Mock fallback
+│   ├── firebase_admin_init_mock.py # Local mock Firestore/Storage
+│   ├── bulk_import.py             # CSV dataset bulk importer
+│   ├── app/
+│   │   ├── routes/candidates.py   # /api/candidates/upload & bulk-import
+│   │   ├── models/candidate.py    # CandidateApplication, ScoreRubric
+│   │   └── agents/cv_parser_agent.py # Gemini AI CV parser
 │   ├── routes/
-│   │   ├── candidates.py          # /api/candidates endpoints
+│   │   ├── candidates.py          # /api/candidates list & detail
 │   │   ├── assessments.py         # /api/assessments endpoints
 │   │   └── schedule.py            # /api/schedule endpoints
-│   ├── agents/
-│   │   ├── cv_parser_agent.py     # Claude CV parsing (D1, D2, D4)
-│   │   ├── evaluator.py           # Assessment scoring (D3, D5, D6)
-│   │   └── scoring_engine.py      # 6-dimension score computation
-│   ├── models/
-│   │   ├── candidate.py           # Candidate Pydantic models
-│   │   ├── assessment.py          # Assessment Pydantic models
-│   │   └── job.py                 # Job Pydantic models
 │   ├── services/
 │   │   ├── firestore_service.py   # Firestore CRUD helpers
 │   │   ├── storage_service.py     # Firebase Storage helpers
-│   │   ├── email_service.py       # SendGrid integration
-│   │   └── calendar_service.py    # Google Calendar API
-│   ├── tasks/
-│   │   └── pipeline_tasks.py      # Celery task chain
+│   │   └── email_service.py       # Gmail SMTP email sender
+│   ├── tasks/pipeline_tasks.py    # Celery async task chain
 │   ├── requirements.txt
 │   └── Dockerfile
 ├── frontend/
 │   ├── src/
-│   │   ├── firebase.js            # Firebase JS SDK config
-│   │   ├── App.jsx                # React Router setup
-│   │   ├── main.jsx               # Entry point
-│   │   ├── context/AuthContext.jsx # Firebase Auth context
-│   │   ├── pages/
-│   │   │   ├── Login.jsx          # HR login (Firebase Auth)
-│   │   │   ├── Apply.jsx          # Candidate CV upload + tracking
-│   │   │   ├── Dashboard.jsx      # HR dashboard (live updates)
-│   │   │   ├── Assessment.jsx     # Assessment portal (split-pane)
-│   │   │   └── Schedule.jsx       # Interview calendar
+│   │   ├── App.jsx                # React Router + connection test
 │   │   ├── components/
-│   │   │   ├── CandidateTable.jsx # Live candidate table
-│   │   │   ├── CandidateDrawer.jsx# Detail drawer with radar chart
-│   │   │   ├── StatusPill.jsx     # Status badges
-│   │   │   ├── ScoreBar.jsx       # Animated score bars
-│   │   │   ├── ScoreRadar.jsx     # SVG radar chart (6 dimensions)
-│   │   │   ├── CalendarGrid.jsx   # Weekly calendar view
-│   │   │   └── ProtectedRoute.jsx # Auth guard
-│   │   ├── hooks/
-│   │   │   ├── useCandidates.js   # Firestore onSnapshot
-│   │   │   ├── useAssessment.js   # Assessment data + submission
-│   │   │   └── useAuth.js         # Auth hook
-│   │   └── api/client.js          # Axios + Firebase Auth token
-│   ├── index.html
+│   │   │   ├── FileUpload.jsx     # CV drag-and-drop upload
+│   │   │   └── Dashboard.jsx      # Candidate pipeline table
+│   │   └── pages/
+│   │       ├── Login.jsx          # Firebase Auth login
+│   │       ├── Assessment.jsx     # Candidate assessment portal
+│   │       └── Schedule.jsx       # Interview calendar
+│   ├── vercel.json                # Vercel deployment config
 │   ├── vite.config.js
-│   ├── tailwind.config.js
 │   └── package.json
-├── docker-compose.yml
-├── firestore.rules
-├── .env.example
+├── .github/workflows/ci.yml       # GitHub Actions CI/CD
+├── docker-compose.yml             # Full stack Docker setup
+├── railway.toml                   # Railway deployment config
+├── firestore.rules                # Firebase security rules
+├── .env.example                   # Environment variable template
 └── README.md
 ```
 
-## API Endpoints
+---
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/candidates/upload` | Upload CV + start pipeline |
-| GET | `/api/candidates` | List candidates (with filters) |
-| GET | `/api/candidates/{id}` | Get candidate details |
-| POST | `/api/assessments/submit` | Submit assessment answers |
-| GET | `/api/assessments/{token}` | Get assessment by token |
-| GET | `/api/schedule` | Get available interview slots |
-| POST | `/api/schedule` | Book an interview slot |
-| GET | `/api/jobs` | List active jobs |
-| POST | `/api/jobs` | Create a new job |
-| GET | `/api/health` | Health check |
+## 🔒 Security Notes
 
-## Pipeline Flow
+- **Never commit `.env` or `serviceAccountKey.json`** — both are in `.gitignore`
+- The `JWT_SECRET_KEY` must be a random 32+ character string in production
+- Gmail App Passwords are single-app passwords — not your real account password
+- Firebase Firestore security rules are in `firestore.rules` — deploy them via Firebase CLI
 
-```
-CV Upload → Firestore (UPLOADED)
-    ↓
-Celery: parse_cv_task → Claude AI parsing → D1, D2, D4 scores
-    ↓
-Celery: screening_decision_task → pass/fail on partial composite
-    ↓ (if passed)
-Celery: send_assessment_email_task → SendGrid email + Firestore assessment
-    ↓
-Celery: notify_hr_task → HR notification email
-    ↓ (candidate submits)
-Celery: evaluate_assessment_task → MCQ/Coding/Open-ended scoring
-    ↓
-Scoring Engine → D3, D5, D6 → Composite Score
-    ↓ (if composite ≥ threshold)
-Google Calendar API → Interview scheduled
-    ↓
-SendGrid → Interview confirmation email
-```
+---
 
-## License
+## 📄 License
 
-MIT
+MIT — see [LICENSE](LICENSE) for details.

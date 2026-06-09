@@ -1,33 +1,74 @@
-# Environments & Binaries
-python312/
+# ============================================================
+# RecruitFlow — .gitignore
+# ============================================================
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# --- Virtual environments & local Python runtimes ---
 venv/
+.venv/
+env/
+python312/
+*.pth
+
+# --- Environment & Secrets (NEVER commit these) ---
 .env
 .env.local
 .env.*.local
-*.pyc
-__pycache__/
-.pytest_cache/
 
-# Node modules & builds
-node_modules/
-frontend/node_modules/
-dist/
-frontend/dist/
-.eslintcache
+# --- Firebase Credentials (NEVER commit these) ---
+serviceAccountKey.json
+calendar_credentials.json
+*serviceAccount*.json
+*.json.key
+firebase-adminsdk*.json
 
-# Local database & Storage (Firebase offline mocks)
+# --- Local mock database (runtime artifact) ---
 backend/mock_db.json
 backend/mock_storage/
 
-# Credentials & Service accounts
-serviceAccountKey.json
-calendar_credentials.json
-*.json.key
+# --- Node.js ---
+node_modules/
+frontend/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.eslintcache
 
-# IDEs & System files
+# --- Build outputs ---
+frontend/dist/
+dist/
+
+# --- IDE & OS ---
 .vscode/
 .idea/
 .gemini/
 Thumbs.db
 .DS_Store
 *.log
+*.swp
+*.swo
+
+# --- Celery & Redis ---
+celerybeat-schedule
+celerybeat.pid
+
+# --- Test data ---
+test_cv.pdf
+resumes/

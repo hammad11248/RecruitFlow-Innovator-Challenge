@@ -15,7 +15,7 @@ import os
 from datetime import datetime
 from typing import Any, Optional
 
-import anthropic
+import google.generativeai as genai
 
 from backend.config import settings
 from backend.services.firestore_service import (
@@ -44,16 +44,16 @@ from backend.agents.scoring_engine import (
 
 logger = logging.getLogger(__name__)
 
-_claude_client = None
+_gemini_configured = False
 
 
-def _get_claude() -> anthropic.Anthropic:
-    """Lazy-init Anthropic client."""
-    global _claude_client
-    if _claude_client is None:
-        api_key = settings.anthropic_api_key if settings.is_anthropic_configured else "mock-key"
-        _claude_client = anthropic.Anthropic(api_key=api_key)
-    return _claude_client
+def _configure_gemini():
+    """Configure Gemini client."""
+    global _gemini_configured
+    if not _gemini_configured:
+        api_key = settings.gemini_api_key if settings.is_gemini_configured else "mock-key"
+        genai.configure(api_key=api_key)
+        _gemini_configured = True
 
 
 # ---------------------------------------------------------------------------
@@ -165,26 +165,25 @@ def score_open_ended(
     answer: str,
     rubric: str,
 ) -> tuple[float, str]:
-    """Score an open-ended answer using Claude API. Returns (score, feedback)."""
-    if not settings.is_anthropic_configured:
-        logger.warning("Anthropic API key is not set. Generating mock open-ended evaluation.")
+    """Score an open-ended answer using Google Gemini. Returns (score, feedback)."""
+    if not settings.is_gemini_configured:
+        logger.warning("Gemini API key is not set. Generating mock open-ended evaluation.")
         import random
         score = random.randint(75, 95)
-        return float(score), f"Mock evaluation: The answer shows good depth and covers key requirements outlined in the rubric. (Bypassed Claude, score={score}/100)"
+        return float(score), f"Mock evaluation: The answer shows good depth and covers key requirements outlined in the rubric. (Bypassed Gemini, score={score}/100)"
 
-    client = _get_claude()
-
-    response = client.messages.create(
-        model=settings.anthropic_model,
-        max_tokens=1024,
-        system=OPEN_ENDED_SCORING_PROMPT.format(rubric=rubric),
-        messages=[{
-            "role": "user",
-            "content": f"Score this answer:\n\n{answer}",
-        }],
+    _configure_gemini()
+    model = genai.GenerativeModel(
+        model_name=settings.gemini_model,
+        system_instruction=OPEN_ENDED_SCORING_PROMPT.format(rubric=rubric)
     )
 
-    response_text = response.content[0].text.strip()
+    response = model.generate_content(
+        f"Score this answer:\n\n{answer}",
+        generation_config={"response_mime_type": "application/json"}
+    )
+
+    response_text = response.text.strip()
     if response_text.startswith("```"):
         lines = response_text.split("\n")
         if lines[0].startswith("```"):
@@ -197,7 +196,7 @@ def score_open_ended(
         result = json.loads(response_text)
         return float(result.get("score", 50)), result.get("feedback", "")
     except (json.JSONDecodeError, ValueError):
-        logger.warning("Failed to parse open-ended score from Claude")
+        logger.warning("Failed to parse open-ended score from Gemini")
         return 50.0, "Unable to evaluate this answer."
 
 

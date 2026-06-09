@@ -46,8 +46,11 @@ logger = logging.getLogger(__name__)
 def _handle_task_failure(task, exc, candidate_id: str):
     """Common failure handler: update Firestore status and log error."""
     try:
-        sync_update_candidate(candidate_id, {"status": "PROCESSING_FAILED"})
-        sync_append_state_history(candidate_id, "PROCESSING_FAILED", {
+        candidate = sync_get_candidate(candidate_id)
+        status = "PARSE_FAILED" if (candidate and candidate.get("status") == "PARSE_FAILED") else "PROCESSING_FAILED"
+        
+        sync_update_candidate(candidate_id, {"status": status})
+        sync_append_state_history(candidate_id, status, {
             "error": str(exc),
             "task": task.name,
         })
@@ -70,7 +73,6 @@ def _handle_task_failure(task, exc, candidate_id: str):
     bind=True,
     max_retries=3,
     default_retry_delay=30,
-    autoretry_for=(Exception,),
     retry_backoff=True,
     retry_backoff_max=300,
     name="backend.tasks.pipeline_tasks.parse_cv_task",
@@ -86,10 +88,21 @@ def parse_cv_task(self, candidate_id: str) -> str:
         result = process_cv(candidate_id)
         logger.info(f"CV parsed successfully for {candidate_id}")
         return result
+    except ValueError as exc:
+        # Format/Content error, abort early
+        _handle_task_failure(self, exc, candidate_id)
+        raise exc
     except Exception as exc:
-        if self.request.retries >= self.max_retries:
+        # If running in fallback mode (no active Celery worker request ID), do not retry
+        if not getattr(self.request, "id", None):
             _handle_task_failure(self, exc, candidate_id)
-        raise
+            raise exc
+            
+        retries = getattr(self.request, "retries", 0) or 0
+        if retries >= self.max_retries:
+            _handle_task_failure(self, exc, candidate_id)
+            raise exc
+        raise self.retry(exc=exc)
 
 
 # ---------------------------------------------------------------------------

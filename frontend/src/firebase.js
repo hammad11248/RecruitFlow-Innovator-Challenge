@@ -43,7 +43,11 @@ const BACKEND_URL = import.meta.env.VITE_API_URL ||
 // Simple pub-sub for mock auth state
 const authListeners = new Set();
 let mockUser = localStorage.getItem('mock_user') 
-  ? { email: localStorage.getItem('mock_user'), uid: 'mock-hr-uid' }
+  ? { 
+      email: localStorage.getItem('mock_user'), 
+      uid: 'mock-hr-uid',
+      getIdToken: async () => 'mock-token'
+    }
   : null;
 
 const triggerAuthStateChanged = () => {
@@ -52,7 +56,9 @@ const triggerAuthStateChanged = () => {
 
 // Mock Auth
 const mockAuth = {
-  currentUser: mockUser
+  get currentUser() {
+    return mockUser;
+  }
 };
 
 const mockOnAuthStateChanged = (authObj, callback) => {
@@ -66,7 +72,11 @@ const mockSignInWithEmailAndPassword = async (authObj, email, password) => {
   // Simulate API delay
   await new Promise(r => setTimeout(r, 600));
   if (!email || !password) throw new Error("Invalid credentials");
-  mockUser = { email, uid: 'mock-hr-uid' };
+  mockUser = { 
+    email, 
+    uid: 'mock-hr-uid',
+    getIdToken: async () => 'mock-token'
+  };
   localStorage.setItem('mock_user', email);
   triggerAuthStateChanged();
   return { user: mockUser };
@@ -144,6 +154,13 @@ const mockOnSnapshot = (queryOrRef, onNext, onError) => {
   const pollData = async () => {
     if (!active) return;
     try {
+      const headers = {};
+      const user = mockAuth.currentUser;
+      if (user && typeof user.getIdToken === 'function') {
+        const token = await user.getIdToken();
+        headers.Authorization = `Bearer ${token}`;
+      }
+
       if (queryOrRef.id) {
         // Fetch single document (candidate or assessment)
         const isCandidate = queryOrRef.collectionName === 'candidates';
@@ -151,7 +168,7 @@ const mockOnSnapshot = (queryOrRef, onNext, onError) => {
           ? `/candidates/${queryOrRef.id}`
           : `/assessments/${queryOrRef.id}`;
         
-        const res = await axios.get(`${BACKEND_URL}${endpoint}`);
+        const res = await axios.get(`${BACKEND_URL}${endpoint}`, { headers });
         if (!active) return;
         
         onNext({
@@ -170,7 +187,7 @@ const mockOnSnapshot = (queryOrRef, onNext, onError) => {
           if (jobConstraint) params.jobId = jobConstraint.val;
         }
 
-        const res = await axios.get(`${BACKEND_URL}/candidates`, { params });
+        const res = await axios.get(`${BACKEND_URL}/candidates`, { params, headers });
         if (!active) return;
         
         const docs = (res.data.candidates || []).map(c => ({

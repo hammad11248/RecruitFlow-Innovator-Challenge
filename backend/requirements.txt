@@ -10,15 +10,12 @@ firebase-admin==6.6.0
 celery==5.4.0
 redis==5.2.1
 
-# AI - Anthropic Claude
-anthropic==0.42.0
+# AI - Google Gemini
+google-generativeai>=0.8.0
 
 # Document Parsing
 pdfplumber==0.11.4
 python-docx==1.1.2
-
-# Email - SendGrid
-sendgrid==6.11.0
 
 # Google Calendar API
 google-api-python-client==2.159.0

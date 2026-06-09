@@ -11,7 +11,7 @@ import json
 import logging
 from typing import Any
 
-import anthropic
+import google.generativeai as genai
 import pdfplumber
 from docx import Document as DocxDocument
 
@@ -31,16 +31,16 @@ from backend.agents.scoring_engine import (
 
 logger = logging.getLogger(__name__)
 
-_claude_client = None
+_gemini_configured = False
 
 
-def _get_claude() -> anthropic.Anthropic:
-    """Lazy-init Anthropic client."""
-    global _claude_client
-    if _claude_client is None:
-        api_key = settings.anthropic_api_key if settings.is_anthropic_configured else "mock-key"
-        _claude_client = anthropic.Anthropic(api_key=api_key)
-    return _claude_client
+def _configure_gemini():
+    """Configure Gemini client."""
+    global _gemini_configured
+    if not _gemini_configured:
+        api_key = settings.gemini_api_key if settings.is_gemini_configured else "mock-key"
+        genai.configure(api_key=api_key)
+        _gemini_configured = True
 
 
 # ---------------------------------------------------------------------------
@@ -123,11 +123,11 @@ Be thorough. Extract EVERY skill and technology mentioned or implied.
 
 def parse_cv_with_claude(cv_text: str) -> dict[str, Any]:
     """
-    Send CV text to Claude for structured data extraction.
+    Send CV text to Google Gemini for structured data extraction.
     Returns the parsed JSON as a dict.
     """
-    if not settings.is_anthropic_configured:
-        logger.warning("Anthropic API key is not set. Generating mock CV parsed data.")
+    if not settings.is_gemini_configured:
+        logger.warning("Gemini API key is not set. Generating mock CV parsed data.")
         import random
         # Extract email and name if possible from cv_text, or use defaults
         name = "Alex Rivera"
@@ -166,21 +166,18 @@ def parse_cv_with_claude(cv_text: str) -> dict[str, Any]:
             "screeningRationale": f"Candidate has 8 years of experience with strong seniority, leadership signals, and exact match for required skills. Offline mock mode activated."
         }
 
-    client = _get_claude()
-
-    response = client.messages.create(
-        model=settings.anthropic_model,
-        max_tokens=4096,
-        system=CV_PARSE_SYSTEM_PROMPT,
-        messages=[
-            {
-                "role": "user",
-                "content": f"Parse the following CV and extract structured data:\n\n---\n{cv_text}\n---",
-            }
-        ],
+    _configure_gemini()
+    model = genai.GenerativeModel(
+        model_name=settings.gemini_model,
+        system_instruction=CV_PARSE_SYSTEM_PROMPT
     )
 
-    response_text = response.content[0].text.strip()
+    response = model.generate_content(
+        f"Parse the following CV and extract structured data:\n\n---\n{cv_text}\n---",
+        generation_config={"response_mime_type": "application/json"}
+    )
+
+    response_text = response.text.strip()
 
     if response_text.startswith("```"):
         lines = response_text.split("\n")
@@ -238,8 +235,10 @@ def process_cv(candidate_id: str) -> str:
             raise
 
 
-    if not cv_text.strip():
-        raise ValueError("Could not extract any text from the CV file")
+    if not cv_text or len(cv_text.strip()) < 100:
+        sync_update_candidate(candidate_id, {"status": "PARSE_FAILED"})
+        sync_append_state_history(candidate_id, "PARSE_FAILED", {"reason": "CV content is too short or blank."})
+        raise ValueError("CV parse failed: text length less than 100 characters.")
 
     parsed_json = parse_cv_with_claude(cv_text)
 

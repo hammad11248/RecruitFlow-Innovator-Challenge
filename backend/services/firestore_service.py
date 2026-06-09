@@ -95,27 +95,30 @@ async def list_candidates(
     order_by: str = "createdAt",
     limit: int = 50,
 ) -> list[dict[str, Any]]:
-    """List candidates with optional Firestore query filters."""
+    """List candidates with in-memory filters to avoid requiring Firestore composite indexes."""
     query = db.collection(CANDIDATES_COL)
-
-    if status:
-        query = query.where(filter=FieldFilter("status", "==", status))
-    if job_id:
-        query = query.where(filter=FieldFilter("jobId", "==", job_id))
-    if min_score is not None:
-        query = query.where(filter=FieldFilter("compositeScore", ">=", min_score))
-    if max_score is not None:
-        query = query.where(filter=FieldFilter("compositeScore", "<=", max_score))
-    if date_from:
-        query = query.where(filter=FieldFilter("createdAt", ">=", date_from))
-    if date_to:
-        query = query.where(filter=FieldFilter("createdAt", "<=", date_to))
-
-    query = query.order_by(order_by, direction=firestore_module.Query.DESCENDING)
-    query = query.limit(limit)
-
     docs = await _run_sync(query.get)
-    return [_serialize_doc(doc) for doc in docs]
+    candidates = [_serialize_doc(doc) for doc in docs]
+
+    # Apply filters in memory
+    if status:
+        candidates = [c for c in candidates if c.get("status") == status]
+    if job_id:
+        candidates = [c for c in candidates if c.get("jobId") == job_id]
+    if min_score is not None:
+        candidates = [c for c in candidates if c.get("compositeScore", 0) >= min_score]
+    if max_score is not None:
+        candidates = [c for c in candidates if c.get("compositeScore", 0) <= max_score]
+    if date_from:
+        candidates = [c for c in candidates if c.get("createdAt") and c.get("createdAt") >= date_from]
+    if date_to:
+        candidates = [c for c in candidates if c.get("createdAt") and c.get("createdAt") <= date_to]
+
+    # Sort in memory
+    candidates.sort(key=lambda c: c.get(order_by) or (datetime.min if order_by == "createdAt" else 0), reverse=True)
+    
+    # Limit results
+    return candidates[:limit]
 
 
 async def delete_candidate(candidate_id: str) -> None:
@@ -179,13 +182,16 @@ async def get_job(job_id: str) -> Optional[dict[str, Any]]:
 
 
 async def list_jobs(active_only: bool = True) -> list[dict[str, Any]]:
-    """List all jobs, optionally filtering to active only."""
+    """List all jobs, optionally filtering to active only using in-memory sort/filter."""
     query = db.collection(JOBS_COL)
-    if active_only:
-        query = query.where(filter=FieldFilter("isActive", "==", True))
-    query = query.order_by("createdAt", direction=firestore_module.Query.DESCENDING)
     docs = await _run_sync(query.get)
-    return [_serialize_doc(doc) for doc in docs]
+    jobs = [_serialize_doc(doc) for doc in docs]
+    
+    if active_only:
+        jobs = [j for j in jobs if j.get("isActive") is True]
+        
+    jobs.sort(key=lambda j: j.get("createdAt") or datetime.min, reverse=True)
+    return jobs
 
 
 async def update_job(job_id: str, data: dict[str, Any]) -> None:

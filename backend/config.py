@@ -1,11 +1,11 @@
-"""
-Application configuration using Pydantic BaseSettings.
-All environment variables are loaded from .env file at project root.
-"""
-
+import os
 from pydantic_settings import BaseSettings
 from pydantic import Field
 from typing import Optional
+
+config_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(config_dir)
+env_path = os.path.join(project_root, ".env")
 
 
 class Settings(BaseSettings):
@@ -29,24 +29,44 @@ class Settings(BaseSettings):
     vite_firebase_messaging_sender_id: Optional[str] = None
     vite_firebase_app_id: Optional[str] = None
 
-    # --- Anthropic Claude API ---
+    # --- Google Gemini API ---
+    gemini_api_key: str = Field(
+        default="",
+        description="Google Gemini API key"
+    )
+    gemini_model: str = Field(
+        default="gemini-2.5-flash",
+        description="Google Gemini model identifier"
+    )
+
+    # --- Gmail SMTP Email ---
+    email_user: str = Field(
+        default="",
+        description="Gmail address for SMTP"
+    )
+    email_pass: str = Field(
+        default="",
+        description="Gmail App Password for SMTP"
+    )
+
+    # --- Anthropic Claude API (Legacy) ---
     anthropic_api_key: str = Field(
         default="",
-        description="Anthropic API key for Claude"
+        description="Legacy Anthropic API key"
     )
     anthropic_model: str = Field(
         default="claude-sonnet-4-20250514",
-        description="Claude model identifier"
+        description="Legacy Claude model identifier"
     )
 
-    # --- SendGrid Email ---
+    # --- SendGrid Email (Legacy) ---
     sendgrid_api_key: str = Field(
         default="",
-        description="SendGrid API key"
+        description="Legacy SendGrid API key"
     )
     sendgrid_from_email: str = Field(
         default="noreply@example.com",
-        description="Sender email address for SendGrid"
+        description="Legacy Sender email address for SendGrid"
     )
 
     # --- Google Calendar API ---
@@ -111,17 +131,26 @@ class Settings(BaseSettings):
     )
 
     @property
+    def is_gemini_configured(self) -> bool:
+        key = self.gemini_api_key
+        return bool(key and key.strip() and "your-key" not in key and "gemini-api-key" not in key)
+
+    @property
+    def is_email_configured(self) -> bool:
+        user = self.email_user
+        passw = self.email_pass
+        return bool(user and user.strip() and "your-email" not in user and passw and passw.strip() and "your-gmail" not in passw)
+
+    @property
     def is_anthropic_configured(self) -> bool:
-        key = self.anthropic_api_key
-        return bool(key and key.strip() and "your-key" not in key and "sk-ant-your-key" not in key)
+        return self.is_gemini_configured
 
     @property
     def is_sendgrid_configured(self) -> bool:
-        key = self.sendgrid_api_key
-        return bool(key and key.strip() and "your-key" not in key and "SG.your-key" not in key)
+        return self.is_email_configured
 
     model_config = {
-        "env_file": ".env",
+        "env_file": env_path,
         "env_file_encoding": "utf-8",
         "case_sensitive": False,
         "extra": "ignore",

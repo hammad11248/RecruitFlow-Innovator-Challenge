@@ -8,10 +8,11 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile, Depends
 
 from backend.services import firestore_service, storage_service
 from backend.tasks.pipeline_tasks import build_pipeline_chain
+from backend.routes.auth import verify_firebase_token, require_hr_user
 
 router = APIRouter(tags=["Candidates"])
 
@@ -116,6 +117,7 @@ async def list_candidates(
     dateTo: Optional[str] = Query(None, description="Filter to date (ISO format)"),
     orderBy: str = Query("createdAt", description="Field to order by"),
     limit: int = Query(50, description="Max results", ge=1, le=200),
+    user: dict = Depends(require_hr_user),
 ):
     """
     List candidates with optional filters, querying Firestore directly.
@@ -146,7 +148,7 @@ async def list_candidates(
 # ---------------------------------------------------------------------------
 
 @router.get("/candidates/{candidate_id}")
-async def get_candidate(candidate_id: str):
+async def get_candidate(candidate_id: str, user: dict = Depends(verify_firebase_token)):
     """Fetch full candidate document from Firestore."""
     candidate = await firestore_service.get_candidate(candidate_id)
     if not candidate:
@@ -161,6 +163,7 @@ async def get_candidate(candidate_id: str):
 @router.get("/jobs")
 async def list_jobs(
     active_only: bool = Query(True, description="Only return active jobs"),
+    user: dict = Depends(verify_firebase_token),
 ):
     """List all jobs."""
     jobs = await firestore_service.list_jobs(active_only=active_only)
@@ -172,7 +175,7 @@ async def list_jobs(
 # ---------------------------------------------------------------------------
 
 @router.post("/jobs")
-async def create_job(job_data: dict):
+async def create_job(job_data: dict, user: dict = Depends(require_hr_user)):
     """Create a new job posting."""
     job_id = await firestore_service.create_job(job_data)
     return {"jobId": job_id, "message": "Job created successfully"}
@@ -183,7 +186,7 @@ async def create_job(job_data: dict):
 # ---------------------------------------------------------------------------
 
 @router.get("/jobs/{job_id}")
-async def get_job(job_id: str):
+async def get_job(job_id: str, user: dict = Depends(verify_firebase_token)):
     """Fetch a single job document."""
     job = await firestore_service.get_job(job_id)
     if not job:

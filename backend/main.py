@@ -17,13 +17,14 @@ from fastapi.middleware.cors import CORSMiddleware
 import backend.firebase_admin_init  # noqa: F401
 
 
+from backend.app.routes.candidates import router as candidates_ingestion_router
 from backend.routes.candidates import router as candidates_router
 from backend.routes.assessments import router as assessments_router
 from backend.routes.schedule import router as schedule_router
 
 app = FastAPI(
-    title="HR Recruitment Funnel API",
-    description="Enterprise-grade automated HR recruitment pipeline with 6-dimension AI scoring",
+    title="RecruitFlow — HR Recruitment Funnel API",
+    description="Autonomous AI-powered recruitment pipeline: CV ingestion → 6-dimension scoring → assessment → interview scheduling",
     version="1.0.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
@@ -36,6 +37,9 @@ origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
 ]
 if settings.frontend_url:
     normalized_origin = settings.frontend_url.rstrip("/")
@@ -56,6 +60,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 
 # Include route modules
+app.include_router(candidates_ingestion_router, prefix="/api")
 app.include_router(candidates_router, prefix="/api")
 app.include_router(assessments_router, prefix="/api")
 app.include_router(schedule_router, prefix="/api")

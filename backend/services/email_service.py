@@ -6,57 +6,57 @@ interview confirmations, rejection notices, and HR notifications.
 from __future__ import annotations
 
 import logging
-
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail, HtmlContent
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 from backend.config import settings
 
 logger = logging.getLogger(__name__)
 
-_sg_client = None
 
-
-def _get_client() -> SendGridAPIClient:
-    """Lazy-init SendGrid client."""
-    global _sg_client
-    if _sg_client is None:
-        api_key = settings.sendgrid_api_key if settings.is_sendgrid_configured else "mock-key"
-        _sg_client = SendGridAPIClient(api_key)
-    return _sg_client
-
-
-def _send_email(to_email: str, subject: str, html_body: str) -> bool:
+def send_email(recipient_email: str, subject: str, body: str) -> bool:
     """
-    Send an email via SendGrid.
-    Returns True on success, False on failure.
+    Send an email using Gmail SMTP and standard libraries.
+    Accepts recipient_email, subject, and body to keep compatible with existing Celery tasks.
     """
-    if not settings.is_sendgrid_configured:
-        logger.warning(f"[EMAIL MOCK] Sending email to: {to_email} | Subject: '{subject}'")
-        # Print a short preview of html body
-        body_text = html_body.replace("<br>", "\n").replace("<p>", "\n").strip()
+    if not settings.is_email_configured:
+        logger.warning(f"[EMAIL MOCK] Sending email to: {recipient_email} | Subject: '{subject}'")
+        body_text = body.replace("<br>", "\n").replace("<p>", "\n").strip()
         import re
         body_clean = re.sub('<[^<]+?>', '', body_text)
         preview = "\n".join([line.strip() for line in body_clean.split("\n") if line.strip()][:15])
         logger.warning(f"[EMAIL MOCK] Content:\n---\n{preview}\n---")
         return True
 
-    message = Mail(
-        from_email=settings.sendgrid_from_email,
-        to_emails=to_email,
-        subject=subject,
-        html_content=HtmlContent(html_body),
-    )
+    # Setup the MIME message
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = subject
+    msg['From'] = settings.email_user
+    msg['To'] = recipient_email
+
+    # Check if the body contains HTML tags to send as html
+    if "<html>" in body or "<body" in body or "<p>" in body or "<br>" in body:
+        part = MIMEText(body, 'html')
+    else:
+        part = MIMEText(body, 'plain')
+    msg.attach(part)
+
     try:
-        client = _get_client()
-        response = client.send(message)
-        logger.info(
-            f"Email sent to {to_email} | status={response.status_code}"
-        )
-        return response.status_code in (200, 201, 202)
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()
+            server.login(settings.email_user, settings.email_pass)
+            server.sendmail(settings.email_user, recipient_email, msg.as_string())
+        logger.info(f"Email sent successfully to {recipient_email} via Gmail SMTP")
+        return True
     except Exception as e:
-        logger.error(f"Failed to send email to {to_email}: {e}")
+        logger.error(f"Failed to send email to {recipient_email} via Gmail SMTP: {e}")
         return False
+
+
+def _send_email(to_email: str, subject: str, html_body: str) -> bool:
+    """Wrapper to maintain backward compatibility with existing functions."""
+    return send_email(recipient_email=to_email, subject=subject, body=html_body)
 
 
 
