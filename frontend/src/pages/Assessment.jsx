@@ -9,12 +9,7 @@ export default function Assessment() {
   const [timeLeft, setTimeLeft] = useState(null)
   const [submitted, setSubmitted] = useState(false)
   const [activeQuestion, setActiveQuestion] = useState(0)
-  const handleSubmitRef = useRef(handleSubmit)
-
-  // Keep ref updated with latest handleSubmit to avoid stale closures
-  useEffect(() => {
-    handleSubmitRef.current = handleSubmit
-  }, [handleSubmit])
+  const handleSubmitRef = useRef(null)
 
   // Initialize timer when assessment loads
   useEffect(() => {
@@ -81,6 +76,11 @@ export default function Assessment() {
       console.error('Submit failed:', err)
     }
   }, [submitted, assessment, answers, submitAnswers])
+
+  // Keep ref updated with handleSubmit
+  useEffect(() => {
+    handleSubmitRef.current = handleSubmit
+  }, [handleSubmit])
 
   if (loading) {
     return (

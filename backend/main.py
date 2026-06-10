@@ -53,6 +53,7 @@ app.add_middleware(
         "https://recruitflow-9f5a0.web.app",
         "https://recruitflow-9f5a0.firebaseapp.com",
         "http://localhost:5173",
+        "http://localhost:5174",
         "http://localhost:3000",
     ],
     allow_credentials=True,
