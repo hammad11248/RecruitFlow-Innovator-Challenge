@@ -215,7 +215,6 @@ export default function Apply() {
       formData.append('jobId', jobId)
 
       const response = await client.post('/candidates/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (progressEvent) => {
           if (progressEvent.total) {
             const progress = Math.round(

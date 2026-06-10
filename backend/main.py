@@ -14,7 +14,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # Initialize Firebase Admin SDK on import (singleton)
-import backend.firebase_admin_init  # noqa: F401
+from backend import firebase_admin_init
+# keep a reference so linters know the import is intentionally used
+_firebase_admin_init = firebase_admin_init
 
 
 from backend.routes.candidates import router as candidates_router
@@ -26,7 +28,7 @@ from backend.routes.auth import router as auth_router
 from contextlib import asynccontextmanager
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_: FastAPI):
     # Startup: Start task queue worker
     from backend.services.task_queue_service import start_worker, stop_worker
     start_worker()

@@ -168,9 +168,8 @@ async def lookup_candidate(email: str = Query(..., description="Candidate email 
 @router.get("/jobs")
 async def list_jobs(
     active_only: bool = Query(True, description="Only return active jobs"),
-    user: dict = Depends(verify_firebase_token),
 ):
-    """List all jobs."""
+    """List jobs for the public application form and authenticated views."""
     jobs = await firestore_service.list_jobs(active_only=active_only)
     return {"jobs": jobs, "count": len(jobs)}
 

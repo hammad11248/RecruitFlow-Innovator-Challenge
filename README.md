@@ -119,8 +119,17 @@
 git clone https://github.com/your-username/recruitflow.git
 cd recruitflow
 
-# Copy environment template and fill in your values
+# Copy environment template and fill in your values (macOS / Linux)
 cp .env.example .env
+```
+
+On Windows PowerShell:
+
+```powershell
+git clone https://github.com/your-username/recruitflow.git
+Set-Location .\recruitflow
+# Copy environment template
+Copy-Item .env.example .env
 ```
 
 Open `.env` and fill in:
@@ -139,6 +148,21 @@ Save it as `serviceAccountKey.json` in the project root.
 
 ### 3. Run Manually (Development)
 
+Quick start (Windows PowerShell):
+
+```powershell
+# Terminal 1 — Backend
+pip install -r requirements.txt
+python -m uvicorn backend.main:app --host 127.0.0.1 --port 8001 --reload
+
+# Terminal 2 — Frontend
+Set-Location .\frontend
+npm install
+npm run dev
+```
+
+Quick start (macOS / Linux):
+
 ```bash
 # Terminal 1 — Backend
 pip install -r requirements.txt
@@ -151,7 +175,10 @@ npm run dev
 ```
 
 - **Frontend**: http://localhost:5173
+- **HR dashboard**: http://localhost:5173/hr
+- **Candidate portal**: http://localhost:5173/candidate/{candidateId}
 - **API Docs**: http://localhost:8001/api/docs
+- **API health**: http://localhost:8001/api/health
 
 ---
 

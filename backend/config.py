@@ -108,13 +108,15 @@ class Settings(BaseSettings):
 
     @property
     def is_gemini_configured(self) -> bool:
-        key = self.gemini_api_key
+        # Guard against FieldInfo typing at analysis time by coercing to str
+        key = str(self.gemini_api_key or "")
         return bool(key and key.strip() and "your-key" not in key and "gemini-api-key" not in key)
 
     @property
     def is_email_configured(self) -> bool:
-        user = self.email_user
-        passw = self.email_pass
+        # Coerce to str to avoid FieldInfo type during static analysis
+        user = str(self.email_user or "")
+        passw = str(self.email_pass or "")
         return bool(user and user.strip() and "your-email" not in user and passw and passw.strip() and "your-gmail" not in passw)
 
 
