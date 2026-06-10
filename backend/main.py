@@ -74,10 +74,14 @@ app.include_router(evaluation_router, prefix="/api")
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint."""
+    from backend.firebase_admin_init import MOCK_MODE, db
     return {
         "status": "healthy",
         "service": "HR Recruitment Funnel API",
         "version": "1.0.0",
+        "mock_mode": MOCK_MODE,
+        "firebase_initialized": db is not None,
+        "assessment_base_url": settings.assessment_base_url,
     }
 
 
