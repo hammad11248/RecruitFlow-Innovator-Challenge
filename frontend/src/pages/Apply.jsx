@@ -60,18 +60,29 @@ export default function Apply() {
       })
   }, [])
 
-  // Real-time candidate status tracking via onSnapshot
+  // Real-time candidate status tracking via short-polling HTTP client
   useEffect(() => {
     if (!candidateId) return
 
-    const docRef = doc(db, 'candidates', candidateId)
-    const unsubscribe = onSnapshot(docRef, (snapshot) => {
-      if (snapshot.exists()) {
-        setCandidateStatus(snapshot.data())
+    let active = true
+    const fetchStatus = async () => {
+      try {
+        const res = await client.get(`/candidate-portal/${candidateId}`)
+        if (active) {
+          setCandidateStatus(res.data)
+        }
+      } catch (err) {
+        console.error("Failed to fetch candidate status:", err)
       }
-    })
+    }
 
-    return unsubscribe
+    fetchStatus()
+    const interval = setInterval(fetchStatus, 5000)
+
+    return () => {
+      active = false
+      clearInterval(interval)
+    }
   }, [candidateId])
 
   // Handle candidate authentication state and lookup

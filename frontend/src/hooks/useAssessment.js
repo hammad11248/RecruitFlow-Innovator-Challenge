@@ -19,28 +19,30 @@ export function useAssessment(token) {
       return
     }
 
-    setLoading(true)
-    setError(null)
-
-    const docRef = doc(db, 'assessments', token)
-    const unsubscribe = onSnapshot(
-      docRef,
-      (snapshot) => {
-        if (snapshot.exists()) {
-          setAssessment({ id: snapshot.id, ...snapshot.data() })
-        } else {
-          setError('Assessment not found')
+    let active = true
+    const fetchAssessment = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const response = await client.get(`/assessments/${token}`)
+        if (active) {
+          setAssessment(response.data)
         }
-        setLoading(false)
-      },
-      (err) => {
-        console.error('Assessment snapshot error:', err)
-        setError(err.message)
-        setLoading(false)
+      } catch (err) {
+        if (active) {
+          setError(err.response?.data?.detail || err.message || 'Assessment not found')
+        }
+      } finally {
+        if (active) {
+          setLoading(false)
+        }
       }
-    )
+    }
 
-    return unsubscribe
+    fetchAssessment()
+    return () => {
+      active = false
+    }
   }, [token])
 
   const submitAnswers = async (answers) => {
