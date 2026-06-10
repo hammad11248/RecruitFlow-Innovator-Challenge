@@ -19,7 +19,8 @@ export default function ProtectedRoute({ children }) {
     )
   }
 
-  if (!user) {
+  const role = localStorage.getItem('user_role')
+  if (!user || role !== 'hr') {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 

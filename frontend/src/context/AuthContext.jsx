@@ -21,6 +21,7 @@ export function AuthProvider({ children }) {
   }
 
   const logout = async () => {
+    localStorage.removeItem('user_role')
     return signOut(auth)
   }
 

@@ -13,12 +13,20 @@ const client = axios.create({
 
 // Attach Firebase Auth token to all requests for authenticated HR users
 client.interceptors.request.use(async (config) => {
-  const user = auth.currentUser
+  let token = null;
+  const user = auth.currentUser;
   if (user) {
-    const token = await user.getIdToken()
-    config.headers.Authorization = `Bearer ${token}`
+    token = await user.getIdToken();
+  } else {
+    const mockUserEmail = localStorage.getItem('mock_user');
+    if (mockUserEmail) {
+      token = 'mock-token';
+    }
   }
-  return config
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 })
 
 client.interceptors.response.use(

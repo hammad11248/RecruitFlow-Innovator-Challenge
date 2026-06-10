@@ -30,6 +30,7 @@ export default function Login() {
       }
       // Authenticate/log in
       await login(email, password)
+      localStorage.setItem('user_role', 'hr')
       navigate(from, { replace: true })
     } catch (err) {
       console.error("Authentication error details:", err)
