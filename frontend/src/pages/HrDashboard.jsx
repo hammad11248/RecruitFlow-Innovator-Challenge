@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import StatusPill from '../components/StatusPill'
 
-const API_BASE = import.meta.env.VITE_API_URL || '/api'
+const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://127.0.0.1:8001/api' : '/api')
 
 const STATUS_FILTERS = [
   { value: '', label: 'All', icon: '👥' },

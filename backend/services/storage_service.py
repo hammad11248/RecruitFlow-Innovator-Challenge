@@ -6,8 +6,6 @@ Uses firebase-admin Storage bucket for server-side operations.
 from __future__ import annotations
 
 import asyncio
-import io
-import tempfile
 from functools import partial
 from typing import Optional
 
@@ -127,7 +125,7 @@ def validate_cv_file(filename: str, file_size: int) -> Optional[str]:
     Returns error message string if invalid, None if valid.
     """
     allowed_extensions = {"pdf", "docx"}
-    max_size_mb = 10
+    max_size_mb = 50
 
     ext = get_file_extension(filename)
     if ext not in allowed_extensions:

@@ -10,7 +10,6 @@ from fastapi import APIRouter, HTTPException
 
 from backend.models.assessment import AssessmentSubmission
 from backend.services import firestore_service
-from backend.tasks.pipeline_tasks import evaluate_assessment_task
 
 router = APIRouter(tags=["Assessments"])
 
@@ -69,7 +68,7 @@ async def submit_assessment(submission: AssessmentSubmission):
         await task_queue_service.enqueue("score-candidate", {"token": token})
     except Exception as e:
         import logging
-        logging.getLogger(__name__).error(f"Could not enqueue score-candidate task: {e}")
+        logging.getLogger(__name__).error("Could not enqueue score-candidate task: %s", e)
 
     return {
         "message": "Assessment submitted successfully. Evaluation in progress.",

@@ -13,6 +13,17 @@ bucket = None
 def _initialize_firebase():
     global db, bucket, MOCK_MODE
     
+    # Check if FORCE_MOCK_MODE is enabled via config or env var
+    force_mock = os.getenv("FORCE_MOCK_MODE", "").strip().lower() in ("true", "1", "yes")
+    try:
+        force_mock = force_mock or settings.force_mock_mode
+    except Exception:
+        pass
+    
+    if force_mock:
+        print("[CONFIG] FORCE_MOCK_MODE is enabled — skipping real Firebase initialization.")
+        MOCK_MODE = True
+        return
     # Check if JSON credential env var is provided
     service_account_json = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
     

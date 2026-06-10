@@ -305,7 +305,7 @@ class MockBlob:
     def __init__(self, bucket, storage_path):
         self.bucket = bucket
         self.storage_path = storage_path
-        self.public_url = f"http://localhost:8000/api/mock/cv/{storage_path}"
+        self.public_url = f"http://localhost:8001/api/mock/cv/{storage_path}"
 
     def upload_from_string(self, file_bytes, content_type=None):
         self.bucket.db_client._save_file(self.storage_path, file_bytes)

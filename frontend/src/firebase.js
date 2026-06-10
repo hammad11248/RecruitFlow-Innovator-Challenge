@@ -13,8 +13,40 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
-// Check if we are running in Mock/Demo mode
-const isMockMode = !firebaseConfig.apiKey || firebaseConfig.apiKey.includes('your-') || firebaseConfig.apiKey === '';
+// ---------------------------------------------------------------------------
+// Determine Mock Mode — sync with backend's MOCK_MODE status
+// ---------------------------------------------------------------------------
+
+const BACKEND_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.DEV ? 'http://127.0.0.1:8001/api' : '/api');
+
+// Check if the frontend config itself suggests mock mode
+const frontendSuggestsMock = !firebaseConfig.apiKey || firebaseConfig.apiKey.includes('your-') || firebaseConfig.apiKey === '';
+
+// Synchronously check backend health to align mock mode
+let backendMockMode = false;
+try {
+  const xhr = new XMLHttpRequest();
+  xhr.open('GET', `${BACKEND_URL}/health`, false); // synchronous
+  xhr.timeout = 3000;
+  xhr.send();
+  if (xhr.status === 200) {
+    const healthData = JSON.parse(xhr.responseText);
+    backendMockMode = healthData.mock_mode === true;
+  }
+} catch (e) {
+  console.warn('Could not reach backend health endpoint:', e);
+  // If backend is unreachable, fall back to frontend-only mock check
+}
+
+// Force mock mode if either backend or frontend config says so
+const isMockMode = frontendSuggestsMock || backendMockMode;
+
+if (isMockMode) {
+  console.info(`[RecruitFlow] Running in MOCK MODE (backend_mock=${backendMockMode}, frontend_mock=${frontendSuggestsMock})`);
+} else {
+  console.info('[RecruitFlow] Running in LIVE Firebase mode');
+}
 
 let app = null;
 let realDb = null;
@@ -36,9 +68,6 @@ if (!isMockMode) {
 // ---------------------------------------------------------------------------
 // Mock Implementations for Offline/Demo Mode
 // ---------------------------------------------------------------------------
-
-const BACKEND_URL = import.meta.env.VITE_API_URL || 
-  (window.location.port === '5173' ? 'http://127.0.0.1:8001/api' : '/api');
 
 // Simple pub-sub for mock auth state
 const authListeners = new Set();
@@ -69,8 +98,8 @@ const mockOnAuthStateChanged = (authObj, callback) => {
 };
 
 const mockSignInWithEmailAndPassword = async (authObj, email, password) => {
-  // Simulate API delay
-  await new Promise(r => setTimeout(r, 600));
+  // Call the backend signup/login to ensure the user record is created
+  await new Promise(r => setTimeout(r, 300));
   if (!email || !password) throw new Error("Invalid credentials");
   mockUser = { 
     email, 
@@ -83,7 +112,7 @@ const mockSignInWithEmailAndPassword = async (authObj, email, password) => {
 };
 
 const mockSignOut = async (authObj) => {
-  await new Promise(r => setTimeout(r, 300));
+  await new Promise(r => setTimeout(r, 200));
   mockUser = null;
   localStorage.removeItem('mock_user');
   triggerAuthStateChanged();
@@ -276,8 +305,12 @@ const unifiedSignInWithEmailAndPassword = isMockMode
       try {
         return await realSignInWithEmailAndPassword(authObj, email, password);
       } catch (err) {
-        if (err.code === 'auth/configuration-not-found' || err.message?.includes('configuration-not-found')) {
-          console.warn("Real Firebase auth configuration not found (Email/Password provider likely disabled in console). Falling back to mock auth.");
+        // Fall back to mock auth on configuration errors
+        if (err.code === 'auth/configuration-not-found' || 
+            err.code === 'auth/operation-not-allowed' ||
+            err.message?.includes('configuration-not-found') ||
+            err.message?.includes('CONFIGURATION_NOT_FOUND')) {
+          console.warn("Real Firebase auth not configured. Falling back to mock auth.");
           return mockSignInWithEmailAndPassword(authObj, email, password);
         }
         throw err;

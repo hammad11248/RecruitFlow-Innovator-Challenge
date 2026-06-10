@@ -252,6 +252,10 @@ def send_hr_notification(
     composite_score: float = 0.0,
 ) -> bool:
     """Send a notification to HR about a candidate pipeline event."""
+    score_section = ""
+    if composite_score > 0:
+        score_section = f"<p>Composite Score: <span class='score'>{round(composite_score, 1)}</span>/100</p>"
+    
     html_body = f"""
     <!DOCTYPE html>
     <html>
@@ -273,7 +277,7 @@ def send_hr_notification(
                 <h1>📋 Pipeline Update</h1>
                 <p>Candidate <strong style="color: #f1f5f9;">{candidate_name}</strong> for <strong style="color: #f1f5f9;">{job_title}</strong></p>
                 <p>Status: <span class="badge">{status}</span></p>
-                {"<p>Composite Score: <span class='score'>" + str(round(composite_score, 1)) + "</span>/100</p>" if composite_score > 0 else ""}
+                {score_section}
                 <p>View the full details on your <a href="{settings.frontend_url}/dashboard" style="color: #818cf8;">HR Dashboard</a>.</p>
             </div>
             <div class="footer">

@@ -11,6 +11,12 @@ env_path = os.path.join(project_root, ".env")
 class Settings(BaseSettings):
     """Central configuration for the HR Recruitment Funnel application."""
 
+    # --- Mock Mode ---
+    force_mock_mode: bool = Field(
+        default=False,
+        description="Force mock mode even if Firebase credentials exist"
+    )
+
     # --- Firebase Admin SDK ---
     firebase_service_account_path: str = Field(
         default="./serviceAccountKey.json",

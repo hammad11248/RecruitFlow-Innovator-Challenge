@@ -5,7 +5,7 @@ import StatusPill from '../components/StatusPill'
 import TimelineStepper from '../components/TimelineStepper'
 import { Sparkles, Mail, FileText, ChevronRight, Zap, Info, Clock, AlertTriangle } from 'lucide-react'
 
-const API_BASE = import.meta.env.VITE_API_URL || '/api'
+const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://127.0.0.1:8001/api' : '/api')
 
 const DIMENSION_DISPLAY = {
   technicalSkills: { label: 'Technical Skills', icon: '💻', colorClass: 'stroke-indigo-500', textClass: 'text-indigo-400', description: 'Technical expertise and coding capability fit' },

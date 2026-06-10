@@ -11,7 +11,6 @@ from typing import Optional
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile, Depends
 
 from backend.services import firestore_service, storage_service
-from backend.tasks.pipeline_tasks import build_pipeline_chain
 from backend.routes.auth import verify_firebase_token, require_hr_user
 
 router = APIRouter(tags=["Candidates"])
@@ -78,7 +77,7 @@ async def upload_candidate(
         await task_queue_service.enqueue("process-cv", {"candidate_id": candidate_id})
     except Exception as e:
         import logging
-        logging.getLogger(__name__).error(f"Could not enqueue process-cv task: {e}")
+        logging.getLogger(__name__).error("Could not enqueue process-cv task: %s", e)
 
     return {
         "candidateId": candidate_id,

@@ -26,6 +26,7 @@ from backend.routes.evaluation import router as evaluation_router
 from backend.routes.auth import router as auth_router
 
 from contextlib import asynccontextmanager
+from backend.config import settings
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -45,8 +46,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-from backend.config import settings
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -61,7 +60,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-import os
 from fastapi import HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
