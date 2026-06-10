@@ -109,8 +109,17 @@ class MockFirestoreClient:
 
 class MockFirebaseStore:
     def __init__(self, file_path="backend/mock_db.json"):
-        self.file_path = file_path
-        self.files_dir = "backend/mock_storage"
+        # Detect Vercel serverless / read-only filesystem environment
+        is_serverless = os.environ.get("VERCEL") == "1" or os.environ.get("AWS_LAMBDA_FUNCTION_NAME") is not None
+        
+        if is_serverless:
+            # On Vercel, write mock files to /tmp/ since it's the only writable directory
+            self.file_path = "/tmp/mock_db.json"
+            self.files_dir = "/tmp/mock_storage"
+        else:
+            self.file_path = file_path
+            self.files_dir = "backend/mock_storage"
+            
         os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
         os.makedirs(self.files_dir, exist_ok=True)
         self.data = self._load()
@@ -120,6 +129,21 @@ class MockFirebaseStore:
             try:
                 with open(self.file_path, "r", encoding="utf-8") as f:
                     return json.load(f)
+            except Exception:
+                pass
+        
+        # If active file path does not exist (e.g. first run under /tmp),
+        # try loading from local project mock_db.json if it exists.
+        local_db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "mock_db.json"))
+        if os.path.exists(local_db_path):
+            try:
+                with open(local_db_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                try:
+                    self._save(data)
+                except Exception:
+                    pass
+                return data
             except Exception:
                 pass
         
