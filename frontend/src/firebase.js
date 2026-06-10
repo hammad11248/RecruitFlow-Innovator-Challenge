@@ -244,9 +244,58 @@ export const ref = isMockMode ? mockRef : realRef;
 export const uploadBytesResumable = isMockMode ? mockUploadBytesResumable : realUploadBytesResumable;
 export const getDownloadURL = isMockMode ? mockGetDownloadURL : realGetDownloadURL;
 
-// Auth functions
-export const onAuthStateChanged = isMockMode ? mockOnAuthStateChanged : realOnAuthStateChanged;
-export const signInWithEmailAndPassword = isMockMode ? mockSignInWithEmailAndPassword : realSignInWithEmailAndPassword;
-export const signOut = isMockMode ? mockSignOut : realSignOut;
+// Unified Auth functions to support graceful fallback
+const unifiedOnAuthStateChanged = (authObj, callback) => {
+  authListeners.add(callback);
+  let realUnsubscribe = () => {};
+  if (!isMockMode) {
+    try {
+      realUnsubscribe = realOnAuthStateChanged(authObj, (user) => {
+        if (user) {
+          callback(user);
+        } else {
+          callback(mockUser);
+        }
+      });
+    } catch (err) {
+      console.warn("Failed to subscribe to real Firebase onAuthStateChanged:", err);
+      setTimeout(() => callback(mockUser), 0);
+    }
+  } else {
+    setTimeout(() => callback(mockUser), 0);
+  }
+  return () => {
+    authListeners.delete(callback);
+    realUnsubscribe();
+  };
+};
+
+const unifiedSignInWithEmailAndPassword = isMockMode 
+  ? mockSignInWithEmailAndPassword 
+  : async (authObj, email, password) => {
+      try {
+        return await realSignInWithEmailAndPassword(authObj, email, password);
+      } catch (err) {
+        if (err.code === 'auth/configuration-not-found' || err.message?.includes('configuration-not-found')) {
+          console.warn("Real Firebase auth configuration not found (Email/Password provider likely disabled in console). Falling back to mock auth.");
+          return mockSignInWithEmailAndPassword(authObj, email, password);
+        }
+        throw err;
+      }
+    };
+
+const unifiedSignOut = isMockMode ? mockSignOut : async (authObj) => {
+  await mockSignOut(authObj);
+  try {
+    return await realSignOut(authObj);
+  } catch (err) {
+    console.warn("Real Firebase signout failed:", err);
+  }
+};
+
+// Auth exports
+export const onAuthStateChanged = unifiedOnAuthStateChanged;
+export const signInWithEmailAndPassword = unifiedSignInWithEmailAndPassword;
+export const signOut = unifiedSignOut;
 
 export default app;

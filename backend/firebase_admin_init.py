@@ -17,6 +17,10 @@ def _initialize_firebase():
     service_account_json = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
     
     if service_account_json:
+        service_account_json = service_account_json.strip()
+        if (service_account_json.startswith("'") and service_account_json.endswith("'")) or \
+           (service_account_json.startswith('"') and service_account_json.endswith('"')):
+            service_account_json = service_account_json[1:-1].strip()
         try:
             if not firebase_admin._apps:
                 cred = credentials.Certificate(json.loads(service_account_json))
