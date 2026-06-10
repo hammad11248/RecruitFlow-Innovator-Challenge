@@ -33,8 +33,21 @@ def _upload_cv_sync(
     storage_path = f"cvs/{candidate_id}/{filename}"
     blob = bucket.blob(storage_path)
     blob.upload_from_string(file_bytes, content_type=content_type)
-    blob.make_public()
-    download_url = blob.public_url
+    try:
+        blob.make_public()
+        download_url = blob.public_url
+    except Exception as e:
+        # If bucket has Uniform Bucket-Level Access, make_public() fails.
+        # Generate a signed URL with a long expiration (e.g. 7 days or 365 days) instead.
+        import datetime as dt
+        try:
+            download_url = blob.generate_signed_url(
+                expiration=dt.timedelta(days=365),
+                method="GET",
+            )
+        except Exception:
+            # Fallback to public URL without make_public
+            download_url = blob.public_url
     return storage_path, download_url
 
 
