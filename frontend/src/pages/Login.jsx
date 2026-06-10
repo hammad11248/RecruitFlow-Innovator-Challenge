@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { Mail, Lock, Loader2, ShieldAlert } from 'lucide-react'
+import { Mail, Lock, Loader2, ShieldAlert, UserCheck } from 'lucide-react'
+import client from '../api/client'
 
 export default function Login() {
+  const [mode, setMode] = useState('login') // login | register
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [role, setRole] = useState('recruiter')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const { login } = useAuth()
@@ -21,18 +24,24 @@ export default function Login() {
     setLoading(true)
 
     try {
+      if (mode === 'register') {
+        // Sign up on the backend first
+        await client.post('/auth/signup', { email, password, role })
+      }
+      // Authenticate/log in
       await login(email, password)
       navigate(from, { replace: true })
     } catch (err) {
-      console.error("Login error details:", err)
+      console.error("Authentication error details:", err)
       const errorMessages = {
         'auth/user-not-found': 'No account found with this email.',
         'auth/wrong-password': 'Incorrect password. Please try again.',
         'auth/invalid-email': 'Please enter a valid email address.',
         'auth/too-many-requests': 'Too many attempts. Please try again later.',
-        'auth/invalid-credential': 'Invalid login credentials. Please check your email and password.',
+        'auth/invalid-credential': 'Invalid login credentials. Please check details.',
+        'auth/email-already-in-use': 'This email address is already registered.'
       }
-      setError(errorMessages[err.code] || err.message || 'Login failed. Please check your credentials.')
+      setError(errorMessages[err.code] || err.response?.data?.detail || err.message || 'Authentication failed. Please check details.')
     } finally {
       setLoading(false)
     }
@@ -72,13 +81,39 @@ export default function Login() {
             </svg>
           </div>
           <h1 className="text-3xl font-extrabold text-slate-50 tracking-tight">RecruitFlow HR</h1>
-          <p className="text-slate-400 mt-2 text-sm">Sign in to coordinate candidate evaluation pipelines</p>
+          <p className="text-slate-400 mt-2 text-sm">Sign in or register to coordinate candidate evaluation pipelines</p>
         </div>
 
         {/* Glass Login Card */}
         <div className="bg-[#1A1A2E]/40 backdrop-blur-xl border border-slate-800 rounded-xl p-8 shadow-[0_0_40px_rgba(99,102,241,0.05)] relative overflow-hidden">
           {/* Card subtle lighting filter */}
           <div className="absolute inset-0 bg-gradient-to-tr from-white/2 to-white/0 pointer-events-none" />
+
+          {/* Mode Selector Tabs */}
+          <div className="flex border-b border-slate-800 pb-2 mb-6 relative z-10">
+            <button
+              onClick={() => { setMode('login'); setError(''); }}
+              type="button"
+              className={`flex-1 text-center pb-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                mode === 'login'
+                  ? 'text-indigo-400 border-b-2 border-indigo-500 font-extrabold'
+                  : 'text-slate-550 hover:text-slate-350'
+              }`}
+            >
+              Sign In
+            </button>
+            <button
+              onClick={() => { setMode('register'); setError(''); }}
+              type="button"
+              className={`flex-1 text-center pb-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                mode === 'register'
+                  ? 'text-indigo-400 border-b-2 border-indigo-500 font-extrabold'
+                  : 'text-slate-550 hover:text-slate-350'
+              }`}
+            >
+              Register Account
+            </button>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-6 relative" id="login-form">
             {error && (
@@ -130,6 +165,35 @@ export default function Login() {
               </div>
             </div>
 
+            {/* Role dropdown (only shown during registration) */}
+            {mode === 'register' && (
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider" htmlFor="role">
+                  HR Role
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                    <UserCheck className="w-4 h-4" />
+                  </div>
+                  <select
+                    id="role"
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    className="block w-full pl-10 pr-4 py-3 bg-[#16213E]/50 border border-slate-855 focus:border-indigo-500 rounded-lg text-slate-200 outline-none text-sm placeholder-slate-650 transition-all focus:ring-1 focus:ring-indigo-500 appearance-none cursor-pointer"
+                  >
+                    <option value="recruiter" className="bg-[#1A1A2E]">Recruiter</option>
+                    <option value="interviewer" className="bg-[#1A1A2E]">Interviewer</option>
+                    <option value="hr_manager" className="bg-[#1A1A2E]">HR Manager</option>
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+                    <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                      <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Glowing Submit Trigger */}
             <button
               type="submit"
@@ -140,14 +204,15 @@ export default function Login() {
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Authenticating credentials...</span>
+                  <span>{mode === 'login' ? 'Authenticating credentials...' : 'Registering account...'}</span>
                 </>
               ) : (
-                'Sign In to Dashboard'
+                mode === 'login' ? 'Sign In to Dashboard' : 'Register & Sign In'
               )}
             </button>
           </form>
         </div>
+
 
         {/* Back to Application link */}
         <p className="text-center text-slate-500 text-xs mt-6">

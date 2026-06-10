@@ -21,6 +21,7 @@ from backend.routes.candidates import router as candidates_router
 from backend.routes.assessments import router as assessments_router
 from backend.routes.schedule import router as schedule_router
 from backend.routes.evaluation import router as evaluation_router
+from backend.routes.auth import router as auth_router
 
 from contextlib import asynccontextmanager
 
@@ -63,6 +64,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 
 # Include route modules
+app.include_router(auth_router, prefix="/api")
 app.include_router(candidates_router, prefix="/api")
 app.include_router(assessments_router, prefix="/api")
 app.include_router(schedule_router, prefix="/api")

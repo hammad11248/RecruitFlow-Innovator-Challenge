@@ -142,6 +142,26 @@ async def get_candidate(candidate_id: str, user: dict = Depends(verify_firebase_
 
 
 # ---------------------------------------------------------------------------
+# GET /api/candidate/lookup
+# ---------------------------------------------------------------------------
+
+@router.get("/candidate/lookup")
+async def lookup_candidate(email: str = Query(..., description="Candidate email to look up")):
+    """
+    Look up a candidate by email and return their ID.
+    Access is public so candidates can access their portal links.
+    """
+    candidate = await firestore_service.get_candidate_by_email(email)
+    if not candidate:
+        raise HTTPException(status_code=404, detail="No application found with this email.")
+    return {
+        "candidateId": candidate["id"],
+        "name": candidate.get("name"),
+        "status": candidate.get("status")
+    }
+
+
+# ---------------------------------------------------------------------------
 # GET /api/jobs
 # ---------------------------------------------------------------------------
 

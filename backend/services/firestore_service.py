@@ -341,3 +341,14 @@ def sync_list_candidates_by_status(status: str) -> list[dict[str, Any]]:
     )
     docs = query.get()
     return [_serialize_doc(doc) for doc in docs]
+
+
+async def get_candidate_by_email(email: str) -> Optional[dict[str, Any]]:
+    """Fetch candidate document by email."""
+    query = db.collection(CANDIDATES_COL)
+    docs = await _run_sync(query.get)
+    for doc in docs:
+        c = _serialize_doc(doc)
+        if c.get("email") and c.get("email").strip().lower() == email.strip().lower():
+            return c
+    return None

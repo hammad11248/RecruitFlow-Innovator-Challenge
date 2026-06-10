@@ -30,6 +30,12 @@ export default function Apply() {
   const [step, setStep] = useState('form') // form | uploading | tracking
   const [dragActive, setDragActive] = useState(false)
 
+  // Tracking Lookup states
+  const [mode, setMode] = useState('apply') // apply | track
+  const [lookupEmail, setLookupEmail] = useState('')
+  const [lookupLoading, setLookupLoading] = useState(false)
+  const [lookupError, setLookupError] = useState('')
+
   // Fetch available jobs
   useEffect(() => {
     client.get('/jobs')
@@ -117,25 +123,8 @@ export default function Apply() {
     setError('')
 
     try {
-      // Upload to Firebase Storage with progress tracking
-      const storageRef = ref(storage, `cvs/temp/${Date.now()}_${file.name}`)
-      const uploadTask = uploadBytesResumable(storageRef, file)
-
-      await new Promise((resolve, reject) => {
-        uploadTask.on(
-          'state_changed',
-          (snapshot) => {
-            const progress = Math.round(
-              (snapshot.bytesTransferred / snapshot.totalBytes) * 100
-            )
-            setUploadProgress(progress)
-          },
-          (err) => reject(err),
-          () => resolve()
-        )
-      })
-
-      // Now call FastAPI to create candidate and start pipeline
+      // Directly call FastAPI to create candidate and start pipeline
+      // We skip the redundant client-side Firebase storage write
       const formData = new FormData()
       formData.append('file', file)
       formData.append('name', name)
@@ -145,6 +134,16 @@ export default function Apply() {
 
       const response = await client.post('/candidates/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const progress = Math.round(
+              (progressEvent.loaded / progressEvent.total) * 100
+            )
+            setUploadProgress(progress)
+          } else {
+            setUploadProgress(50)
+          }
+        }
       })
 
       setCandidateId(response.data.candidateId)
@@ -154,6 +153,29 @@ export default function Apply() {
       setStep('form')
     } finally {
       setUploading(false)
+    }
+  }
+
+  const handleLookup = async (e) => {
+    e.preventDefault()
+    if (!lookupEmail) {
+      setLookupError('Please enter your email.')
+      return
+    }
+    setLookupLoading(true)
+    setLookupError('')
+    try {
+      const response = await client.get(`/candidate/lookup?email=${encodeURIComponent(lookupEmail)}`)
+      if (response.data?.candidateId) {
+        setCandidateId(response.data.candidateId)
+        setStep('tracking')
+      } else {
+        setLookupError('No application found with this email.')
+      }
+    } catch (err) {
+      setLookupError(err.response?.data?.detail || 'No application found with this email.')
+    } finally {
+      setLookupLoading(false)
     }
   }
 
@@ -195,159 +217,228 @@ export default function Apply() {
           {/* LEFT COLUMN: UPLOAD WORKFLOW */}
           <div className="lg:col-span-5 bg-[#1A1A2E]/40 backdrop-blur-xl border border-slate-800 rounded-xl p-6 md:p-8 shadow-[0_0_30px_rgba(99,102,241,0.05)]">
             {step === 'form' && (
-              <form onSubmit={handleSubmit} className="space-y-6" id="apply-form">
-                <div className="border-b border-slate-800 pb-4 mb-4">
-                  <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-                    <User className="w-5 h-5 text-indigo-400" />
-                    Applicant Credentials
-                  </h2>
-                </div>
-
-                {error && (
-                  <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-xl p-3.5 animate-fade-in">
-                    <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-red-300 text-xs font-medium">{error}</span>
-                  </div>
-                )}
-
-                {/* Floating Label: Full Name */}
-                <div className="relative z-0 w-full group">
-                  <input
-                    type="text"
-                    id="apply-name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                    placeholder=" "
-                    className="block py-2.5 px-0 w-full text-sm text-slate-200 bg-transparent border-0 border-b-2 border-slate-800 appearance-none focus:outline-none focus:ring-0 focus:border-indigo-500 transition-all peer"
-                  />
-                  <label
-                    htmlFor="apply-name"
-                    className="peer-focus:font-medium absolute text-sm text-slate-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 peer-focus:text-indigo-400 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
+              <div className="space-y-6">
+                {/* Mode Selector Tabs */}
+                <div className="flex border-b border-slate-800 pb-2 mb-4">
+                  <button
+                    onClick={() => setMode('apply')}
+                    className={`flex-1 text-center pb-2 text-xs font-bold uppercase tracking-wider transition-all ${
+                      mode === 'apply'
+                        ? 'text-indigo-400 border-b-2 border-indigo-500 font-extrabold'
+                        : 'text-slate-500 hover:text-slate-355'
+                    }`}
                   >
-                    Full Name
-                  </label>
-                </div>
-
-                {/* Floating Label: Email */}
-                <div className="relative z-0 w-full group">
-                  <input
-                    type="email"
-                    id="apply-email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    placeholder=" "
-                    className="block py-2.5 px-0 w-full text-sm text-slate-200 bg-transparent border-0 border-b-2 border-slate-800 appearance-none focus:outline-none focus:ring-0 focus:border-indigo-500 transition-all peer"
-                  />
-                  <label
-                    htmlFor="apply-email"
-                    className="peer-focus:font-medium absolute text-sm text-slate-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 peer-focus:text-indigo-400 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
+                    Apply for Position
+                  </button>
+                  <button
+                    onClick={() => setMode('track')}
+                    className={`flex-1 text-center pb-2 text-xs font-bold uppercase tracking-wider transition-all ${
+                      mode === 'track'
+                        ? 'text-indigo-400 border-b-2 border-indigo-500 font-extrabold'
+                        : 'text-slate-500 hover:text-slate-355'
+                    }`}
                   >
-                    Email Address
-                  </label>
+                    Track Application
+                  </button>
                 </div>
 
-                {/* Floating Label: Phone */}
-                <div className="relative z-0 w-full group">
-                  <input
-                    type="tel"
-                    id="apply-phone"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder=" "
-                    className="block py-2.5 px-0 w-full text-sm text-slate-200 bg-transparent border-0 border-b-2 border-slate-800 appearance-none focus:outline-none focus:ring-0 focus:border-indigo-500 transition-all peer"
-                  />
-                  <label
-                    htmlFor="apply-phone"
-                    className="peer-focus:font-medium absolute text-sm text-slate-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 peer-focus:text-indigo-400 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                  >
-                    Phone Number (Optional)
-                  </label>
-                </div>
-
-                {/* Selector Dropdown: Positions */}
-                <div className="space-y-2">
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider" htmlFor="apply-job">Apply for Position</label>
-                  <div className="relative">
-                    <select
-                      id="apply-job"
-                      value={jobId}
-                      onChange={(e) => setJobId(e.target.value)}
-                      className="block w-full px-4 py-3 bg-[#16213E]/50 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-transparent appearance-none cursor-pointer text-sm transition-all"
-                    >
-                      {jobs.length === 0 && <option value="">No positions available</option>}
-                      {jobs.map((job) => (
-                        <option key={job.id} value={job.id} className="bg-[#1A1A2E]">
-                          {job.title}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
-                      <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
-                      </svg>
+                {mode === 'apply' ? (
+                  <form onSubmit={handleSubmit} className="space-y-6" id="apply-form">
+                    <div className="border-b border-slate-800 pb-4 mb-4">
+                      <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                        <User className="w-5 h-5 text-indigo-400" />
+                        Applicant Credentials
+                      </h2>
                     </div>
-                  </div>
-                </div>
 
-                {/* CV Upload Drag-Drop Area */}
-                <div className="space-y-2">
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Upload CV Document</label>
-                  <div
-                    onDragEnter={handleDrag}
-                    onDragOver={handleDrag}
-                    onDragLeave={handleDrag}
-                    onDrop={handleDrop}
-                    className={`relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-300 overflow-hidden ${
-                      file 
-                        ? 'border-indigo-500 bg-indigo-500/5 shadow-[0_0_15px_rgba(99,102,241,0.05)]' 
-                        : 'border-slate-800 hover:border-transparent bg-slate-900/30'
-                    } group`}
-                  >
-                    {/* Gradient background on hover */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-violet-500/5 to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-                    
-                    {/* Glowing border simulation on hover */}
-                    <div className="absolute -inset-[2px] rounded-xl bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-500 opacity-0 group-hover:opacity-100 blur-[2px] -z-10 transition-opacity duration-500" />
-                    
-                    <input
-                      type="file"
-                      accept=".pdf,.docx"
-                      onChange={handleFileChange}
-                      className="absolute inset-0 opacity-0 cursor-pointer"
-                      id="cv-upload"
-                    />
-                    
-                    {file ? (
-                      <div className="flex flex-col items-center justify-center gap-2">
-                        <div className="w-12 h-12 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
-                          <FileText className="w-6 h-6 text-indigo-400" />
-                        </div>
-                        <p className="text-sm font-semibold text-slate-200 max-w-[220px] truncate">{file.name}</p>
-                        <p className="text-xs text-slate-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center">
-                        <Upload className="w-8 h-8 text-slate-500 mb-3 group-hover:text-indigo-400 group-hover:scale-110 transition-all duration-300" />
-                        <p className="text-sm font-medium text-slate-300">
-                          Drag CV here or <span className="text-indigo-400 font-semibold group-hover:underline">browse</span>
-                        </p>
-                        <p className="text-xs text-slate-550 mt-1">PDF or DOCX (Max 10MB)</p>
+                    {error && (
+                      <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-xl p-3.5 animate-fade-in">
+                        <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                        <span className="text-red-300 text-xs font-medium">{error}</span>
                       </div>
                     )}
-                  </div>
-                </div>
 
-                <button
-                  type="submit"
-                  disabled={!file || uploading}
-                  className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:opacity-50 text-white font-medium rounded-lg py-3 text-sm transition-all shadow-lg shadow-indigo-600/10 flex items-center justify-center gap-1.5 cursor-pointer text-center"
-                  id="apply-submit"
-                >
-                  Submit Application
-                </button>
-              </form>
+                    {/* Floating Label: Full Name */}
+                    <div className="relative z-0 w-full group">
+                      <input
+                        type="text"
+                        id="apply-name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        required
+                        placeholder=" "
+                        className="block py-2.5 px-0 w-full text-sm text-slate-200 bg-transparent border-0 border-b-2 border-slate-800 appearance-none focus:outline-none focus:ring-0 focus:border-indigo-500 transition-all peer"
+                      />
+                      <label
+                        htmlFor="apply-name"
+                        className="peer-focus:font-medium absolute text-sm text-slate-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 peer-focus:text-indigo-400 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
+                      >
+                        Full Name
+                      </label>
+                    </div>
+
+                    {/* Floating Label: Email */}
+                    <div className="relative z-0 w-full group">
+                      <input
+                        type="email"
+                        id="apply-email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        placeholder=" "
+                        className="block py-2.5 px-0 w-full text-sm text-slate-200 bg-transparent border-0 border-b-2 border-slate-800 appearance-none focus:outline-none focus:ring-0 focus:border-indigo-500 transition-all peer"
+                      />
+                      <label
+                        htmlFor="apply-email"
+                        className="peer-focus:font-medium absolute text-sm text-slate-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 peer-focus:text-indigo-400 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
+                      >
+                        Email Address
+                      </label>
+                    </div>
+
+                    {/* Floating Label: Phone */}
+                    <div className="relative z-0 w-full group">
+                      <input
+                        type="tel"
+                        id="apply-phone"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder=" "
+                        className="block py-2.5 px-0 w-full text-sm text-slate-200 bg-transparent border-0 border-b-2 border-slate-800 appearance-none focus:outline-none focus:ring-0 focus:border-indigo-500 transition-all peer"
+                      />
+                      <label
+                        htmlFor="apply-phone"
+                        className="peer-focus:font-medium absolute text-sm text-slate-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 peer-focus:text-indigo-400 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
+                      >
+                        Phone Number (Optional)
+                      </label>
+                    </div>
+
+                    {/* Selector Dropdown: Positions */}
+                    <div className="space-y-2">
+                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider" htmlFor="apply-job">Apply for Position</label>
+                      <div className="relative">
+                        <select
+                          id="apply-job"
+                          value={jobId}
+                          onChange={(e) => setJobId(e.target.value)}
+                          className="block w-full px-4 py-3 bg-[#16213E]/50 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-transparent appearance-none cursor-pointer text-sm transition-all"
+                        >
+                          {jobs.length === 0 && <option value="">No positions available</option>}
+                          {jobs.map((job) => (
+                            <option key={job.id} value={job.id} className="bg-[#1A1A2E]">
+                              {job.title}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+                          <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                            <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* CV Upload Drag-Drop Area */}
+                    <div className="space-y-2">
+                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Upload CV Document</label>
+                      <div
+                        onDragEnter={handleDrag}
+                        onDragOver={handleDrag}
+                        onDragLeave={handleDrag}
+                        onDrop={handleDrop}
+                        className={`relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-300 overflow-hidden ${
+                          file 
+                            ? 'border-indigo-500 bg-indigo-500/5 shadow-[0_0_15px_rgba(99,102,241,0.05)]' 
+                            : 'border-slate-800 hover:border-transparent bg-slate-900/30'
+                        } group`}
+                      >
+                        {/* Gradient background on hover */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-violet-500/5 to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                        <div className="absolute -inset-[2px] rounded-xl bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-500 opacity-0 group-hover:opacity-100 blur-[2px] -z-10 transition-opacity duration-500" />
+                        <input
+                          type="file"
+                          accept=".pdf,.docx"
+                          onChange={handleFileChange}
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                          id="cv-upload"
+                        />
+                        {file ? (
+                          <div className="flex flex-col items-center justify-center gap-2">
+                            <div className="w-12 h-12 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                              <FileText className="w-6 h-6 text-indigo-400" />
+                            </div>
+                            <p className="text-sm font-semibold text-slate-200 max-w-[220px] truncate">{file.name}</p>
+                            <p className="text-xs text-slate-550">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center">
+                            <Upload className="w-8 h-8 text-slate-500 mb-3 group-hover:text-indigo-400 group-hover:scale-110 transition-all duration-300" />
+                            <p className="text-sm font-medium text-slate-300">
+                              Drag CV here or <span className="text-indigo-400 font-semibold group-hover:underline">browse</span>
+                            </p>
+                            <p className="text-xs text-slate-550 mt-1">PDF or DOCX (Max 10MB)</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={!file || uploading}
+                      className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:opacity-50 text-white font-medium rounded-lg py-3 text-sm transition-all shadow-lg shadow-indigo-600/10 flex items-center justify-center gap-1.5 cursor-pointer text-center border border-transparent"
+                      id="apply-submit"
+                    >
+                      Submit Application
+                    </button>
+                  </form>
+                ) : (
+                  <form onSubmit={handleLookup} className="space-y-6" id="track-lookup-form">
+                    <div className="border-b border-slate-800 pb-4 mb-4">
+                      <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                        <Zap className="w-5 h-5 text-indigo-400 animate-pulse" />
+                        Lookup Application
+                      </h2>
+                      <p className="text-xs text-slate-450 mt-1">Enter the email you applied with to retrieve your tracking link.</p>
+                    </div>
+
+                    {lookupError && (
+                      <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-xl p-3.5 animate-fade-in">
+                        <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                        <span className="text-red-300 text-xs font-medium">{lookupError}</span>
+                      </div>
+                    )}
+
+                    {/* Email Input */}
+                    <div className="relative z-0 w-full group">
+                      <input
+                        type="email"
+                        id="lookup-email"
+                        value={lookupEmail}
+                        onChange={(e) => setLookupEmail(e.target.value)}
+                        required
+                        placeholder=" "
+                        className="block py-2.5 px-0 w-full text-sm text-slate-200 bg-transparent border-0 border-b-2 border-slate-800 appearance-none focus:outline-none focus:ring-0 focus:border-indigo-500 transition-all peer"
+                      />
+                      <label
+                        htmlFor="lookup-email"
+                        className="peer-focus:font-medium absolute text-sm text-slate-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 peer-focus:text-indigo-400 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
+                      >
+                        Email Address
+                      </label>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={lookupLoading}
+                      className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:opacity-50 text-white font-medium rounded-lg py-3 text-sm transition-all shadow-lg shadow-indigo-600/10 flex items-center justify-center gap-1.5 cursor-pointer text-center border border-transparent"
+                      id="lookup-submit"
+                    >
+                      {lookupLoading ? 'Locating Application...' : 'Track My Application'}
+                    </button>
+                  </form>
+                )}
+              </div>
             )}
 
             {/* Application Success Summary (Locked Left State after Submission) */}
