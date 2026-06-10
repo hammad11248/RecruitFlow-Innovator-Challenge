@@ -37,6 +37,89 @@ const RANK_BADGES = {
   3: { bg: 'bg-gradient-to-r from-amber-600 to-orange-500 border border-orange-550 shadow-[0_0_10px_rgba(217,119,6,0.2)]', text: 'text-orange-950 font-extrabold' },
 }
 
+const DEMO_CANDIDATES = [
+  {
+    id: 'demo-cand-001',
+    rank: 1,
+    name: 'Aanya Sharma',
+    email: 'aanya.sharma@example.com',
+    status: 'INTERVIEW_SCHEDULED',
+    compositeScore: 92,
+    createdAt: '2026-06-08T10:30:00Z',
+    jobId: 'demo-job-frontend',
+    skills: ['React', 'TypeScript', 'GraphQL', 'Firebase'],
+    dimensions: {
+      technicalSkills: { rawScore: 96 },
+      experienceSeniority: { rawScore: 88 },
+      assessmentPerformance: { rawScore: 91 },
+      cvQuality: { rawScore: 84 },
+      culturalFit: { rawScore: 90 },
+      engagement: { rawScore: 89 },
+    },
+    reviewSummary: 'Strong full-stack delivery background with high ownership, clear communication, and excellent assessment performance.',
+  },
+  {
+    id: 'demo-cand-002',
+    rank: 2,
+    name: 'Brian Lee',
+    email: 'brian.lee@example.com',
+    status: 'ASSESSMENT_SENT',
+    compositeScore: 84,
+    createdAt: '2026-06-07T14:10:00Z',
+    jobId: 'demo-job-platform',
+    skills: ['Python', 'FastAPI', 'PostgreSQL'],
+    dimensions: {
+      technicalSkills: { rawScore: 89 },
+      experienceSeniority: { rawScore: 81 },
+      assessmentPerformance: { rawScore: 78 },
+      cvQuality: { rawScore: 87 },
+      culturalFit: { rawScore: 82 },
+      engagement: { rawScore: 85 },
+    },
+    reviewSummary: 'Passed screening with a strong backend profile and is currently working through the assessment invitation.',
+  },
+  {
+    id: 'demo-cand-003',
+    rank: 3,
+    name: 'Sara Ahmed',
+    email: 'sara.ahmed@example.com',
+    status: 'AI_SCREENING_PASSED',
+    compositeScore: 76,
+    createdAt: '2026-06-06T09:25:00Z',
+    jobId: 'demo-job-data',
+    skills: ['SQL', 'Data Modeling', 'Power BI'],
+    dimensions: {
+      technicalSkills: { rawScore: 78 },
+      experienceSeniority: { rawScore: 74 },
+      assessmentPerformance: { rawScore: 0 },
+      cvQuality: { rawScore: 82 },
+      culturalFit: { rawScore: 77 },
+      engagement: { rawScore: 79 },
+    },
+    reviewSummary: 'Solid analytics candidate with dependable fundamentals and a well-structured resume profile.',
+  },
+  {
+    id: 'demo-cand-004',
+    rank: 4,
+    name: 'Daniel Okafor',
+    email: 'daniel.okafor@example.com',
+    status: 'AI_SCREENING_FAILED',
+    compositeScore: 58,
+    createdAt: '2026-06-05T16:45:00Z',
+    jobId: 'demo-job-ui',
+    skills: ['HTML', 'CSS', 'Accessibility'],
+    dimensions: {
+      technicalSkills: { rawScore: 61 },
+      experienceSeniority: { rawScore: 55 },
+      assessmentPerformance: { rawScore: 0 },
+      cvQuality: { rawScore: 72 },
+      culturalFit: { rawScore: 63 },
+      engagement: { rawScore: 52 },
+    },
+    reviewSummary: 'Early-stage applicant with promising frontend basics, but the current screening bar was not met.',
+  },
+]
+
 export default function HrDashboard() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
@@ -68,6 +151,9 @@ export default function HrDashboard() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [drawerLoading, setDrawerLoading] = useState(false)
   const [drawerTab, setDrawerTab] = useState('overview')
+
+  const visibleCandidates = candidates.length > 0 ? candidates : DEMO_CANDIDATES
+  const usingDemoData = !loading && candidates.length === 0
 
   /* Fetch leaderboard data */
   const fetchLeaderboard = async () => {
@@ -219,19 +305,20 @@ export default function HrDashboard() {
 
   /* Analytics stats */
   const stats = useMemo(() => {
-    const total = candidates.length
-    const passed = candidates.filter(c =>
+    const source = visibleCandidates
+    const total = source.length
+    const passed = source.filter(c =>
       ['AI_SCREENING_PASSED', 'ASSESSMENT_SENT', 'ASSESSMENT_SUBMITTED', 'SCORED', 'INTERVIEW_SCHEDULED'].includes(c.status)
     ).length
-    const scored = candidates.filter(c => c.status === 'SCORED').length
-    const interviews = candidates.filter(c => c.status === 'INTERVIEW_SCHEDULED').length
+    const scored = source.filter(c => c.status === 'SCORED').length
+    const interviews = source.filter(c => c.status === 'INTERVIEW_SCHEDULED').length
     const avgScore = total > 0
-      ? candidates.reduce((sum, c) => sum + (c.compositeScore || 0), 0) / total
+      ? source.reduce((sum, c) => sum + (c.compositeScore || 0), 0) / total
       : 0
-    const topPerformer = candidates.length > 0 ? candidates[0] : null
+    const topPerformer = source.length > 0 ? source[0] : null
 
     return { total, passed, scored, interviews, avgScore, topPerformer }
-  }, [candidates])
+  }, [visibleCandidates])
 
   const handleLogout = async () => {
     await logout()
@@ -381,18 +468,22 @@ export default function HrDashboard() {
               </div>
             )}
 
+            {usingDemoData && (
+              <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl mb-6 flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-indigo-300 text-xs font-semibold uppercase tracking-wider">Demo data enabled</p>
+                  <p className="text-slate-300 text-xs mt-1">Showing sample candidates because the live leaderboard is empty right now.</p>
+                </div>
+                <button onClick={fetchLeaderboard} className="text-xs text-indigo-300 hover:text-indigo-200 underline font-semibold whitespace-nowrap">Try live data</button>
+              </div>
+            )}
+
             {/* Table / Leaderboard Container */}
             {loading && candidates.length === 0 ? (
               <div className="space-y-4">
                 {[...Array(6)].map((_, i) => (
                   <div key={i} className="h-16 bg-[#1A1A2E]/20 border border-slate-800/40 rounded-xl animate-pulse" />
                 ))}
-              </div>
-            ) : candidates.length === 0 ? (
-              <div className="bg-[#1A1A2E]/40 border border-slate-800 rounded-xl p-16 text-center">
-                <Trophy className="w-12 h-12 text-slate-750 mx-auto mb-4" />
-                <h3 className="text-lg font-bold text-slate-200">No Candidates Found</h3>
-                <p className="text-slate-500 text-xs mt-1">Candidates matching evaluation filters will display ranked here</p>
               </div>
             ) : (
               <div className="bg-[#1A1A2E]/40 border border-slate-800 rounded-xl overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.2)]">
@@ -431,7 +522,7 @@ export default function HrDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {candidates.map((candidate, idx) => {
+                      {visibleCandidates.map((candidate, idx) => {
                         const rankNum = idx + 1
                         const rankBadge = RANK_BADGES[rankNum]
                         const dims = candidate.dimensions || candidate.scoreDimensions || {}
