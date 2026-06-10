@@ -1,6 +1,6 @@
 """
-Celery pipeline tasks — the full recruitment pipeline task chain.
-Each task reads/writes Firestore directly with retry logic and error handling.
+Pipeline tasks — the full recruitment pipeline tasks implemented as async functions.
+Each task reads/writes Firestore directly with error handling.
 
 Task Chain:
   parse_cv_task → screening_decision_task → send_assessment_email_task → notify_hr_task
@@ -12,23 +12,22 @@ Standalone tasks:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import traceback
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 
-from celery import chain
-
-from backend.celery_app import celery_app
 from backend.config import settings
 from backend.services.firestore_service import (
-    sync_get_candidate,
-    sync_update_candidate,
-    sync_append_state_history,
-    sync_get_job,
-    sync_create_assessment,
-    sync_log_task_error,
-    sync_list_candidates_by_status,
+    get_candidate,
+    update_candidate,
+    append_state_history,
+    get_job,
+    create_assessment,
+    log_task_error,
+    list_candidates,
+    get_assessment,
 )
 from backend.services.email_service import (
     send_assessment_email,
@@ -40,25 +39,25 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Error handler decorator
+# Error handler
 # ---------------------------------------------------------------------------
 
-def _handle_task_failure(task, exc, candidate_id: str):
+async def _handle_task_failure(task_name: str, exc: Exception, candidate_id: str):
     """Common failure handler: update Firestore status and log error."""
     try:
-        candidate = sync_get_candidate(candidate_id)
+        candidate = await get_candidate(candidate_id)
         status = "PARSE_FAILED" if (candidate and candidate.get("status") == "PARSE_FAILED") else "PROCESSING_FAILED"
         
-        sync_update_candidate(candidate_id, {"status": status})
-        sync_append_state_history(candidate_id, status, {
+        await update_candidate(candidate_id, {"status": status})
+        await append_state_history(candidate_id, status, {
             "error": str(exc),
-            "task": task.name,
+            "task": task_name,
         })
-        sync_log_task_error(
-            task_id=task.request.id or str(uuid.uuid4()),
+        await log_task_error(
+            task_id=str(uuid.uuid4()),
             candidate_id=candidate_id,
             error_message=str(exc),
-            task_name=task.name,
+            task_name=task_name,
             traceback_str=traceback.format_exc(),
         )
     except Exception as log_err:
@@ -69,56 +68,27 @@ def _handle_task_failure(task, exc, candidate_id: str):
 # Task 1: Parse CV
 # ---------------------------------------------------------------------------
 
-@celery_app.task(
-    bind=True,
-    max_retries=3,
-    default_retry_delay=30,
-    retry_backoff=True,
-    retry_backoff_max=300,
-    name="backend.tasks.pipeline_tasks.parse_cv_task",
-)
-def parse_cv_task(self, candidate_id: str) -> str:
+async def parse_cv_task(candidate_id: str) -> str:
     """
-    Parse CV using Claude AI agent.
+    Parse CV using Google Gemini AI agent.
     Computes Dimensions 1, 2, 4 of the scoring rubric.
     Returns candidate_id for the next task in the chain.
     """
     try:
         from backend.agents.cv_parser_agent import process_cv
-        result = process_cv(candidate_id)
+        result = await asyncio.to_thread(process_cv, candidate_id)
         logger.info(f"CV parsed successfully for {candidate_id}")
         return result
-    except ValueError as exc:
-        # Format/Content error, abort early
-        _handle_task_failure(self, exc, candidate_id)
-        raise exc
     except Exception as exc:
-        # If running in fallback mode (no active Celery worker request ID), do not retry
-        if not getattr(self.request, "id", None):
-            _handle_task_failure(self, exc, candidate_id)
-            raise exc
-            
-        retries = getattr(self.request, "retries", 0) or 0
-        if retries >= self.max_retries:
-            _handle_task_failure(self, exc, candidate_id)
-            raise exc
-        raise self.retry(exc=exc)
+        await _handle_task_failure("parse_cv_task", exc, candidate_id)
+        raise exc
 
 
 # ---------------------------------------------------------------------------
 # Task 2: Screening Decision
 # ---------------------------------------------------------------------------
 
-@celery_app.task(
-    bind=True,
-    max_retries=3,
-    default_retry_delay=10,
-    autoretry_for=(Exception,),
-    retry_backoff=True,
-    retry_backoff_max=120,
-    name="backend.tasks.pipeline_tasks.screening_decision_task",
-)
-def screening_decision_task(self, candidate_id: str) -> str:
+async def screening_decision_task(candidate_id: str) -> str:
     """
     Make a pass/fail screening decision based on partial composite (D1+D2+D4).
     If passed: status → AI_SCREENING_PASSED
@@ -126,12 +96,12 @@ def screening_decision_task(self, candidate_id: str) -> str:
     Returns candidate_id.
     """
     try:
-        candidate = sync_get_candidate(candidate_id)
+        candidate = await get_candidate(candidate_id)
         if not candidate:
             raise ValueError(f"Candidate {candidate_id} not found")
 
         job_id = candidate.get("jobId", "")
-        job = sync_get_job(job_id) if job_id else None
+        job = await get_job(job_id) if job_id else None
 
         screening_threshold = 40.0
         if job:
@@ -159,8 +129,8 @@ def screening_decision_task(self, candidate_id: str) -> str:
         screening_score = candidate.get("screeningScore", partial_composite)
 
         if screening_score >= screening_threshold:
-            sync_update_candidate(candidate_id, {"status": "AI_SCREENING_PASSED"})
-            sync_append_state_history(candidate_id, "AI_SCREENING_PASSED", {
+            await update_candidate(candidate_id, {"status": "AI_SCREENING_PASSED"})
+            await append_state_history(candidate_id, "AI_SCREENING_PASSED", {
                 "screeningScore": round(screening_score, 2),
                 "threshold": screening_threshold,
                 "partialComposite": round(partial_composite, 2),
@@ -170,8 +140,8 @@ def screening_decision_task(self, candidate_id: str) -> str:
                 f"score={screening_score:.1f} >= threshold={screening_threshold}"
             )
         else:
-            sync_update_candidate(candidate_id, {"status": "AI_SCREENING_FAILED"})
-            sync_append_state_history(candidate_id, "AI_SCREENING_FAILED", {
+            await update_candidate(candidate_id, {"status": "AI_SCREENING_FAILED"})
+            await append_state_history(candidate_id, "AI_SCREENING_FAILED", {
                 "screeningScore": round(screening_score, 2),
                 "threshold": screening_threshold,
                 "partialComposite": round(partial_composite, 2),
@@ -182,7 +152,7 @@ def screening_decision_task(self, candidate_id: str) -> str:
             job_title = job.get("title", "Position") if job else "Position"
 
             if candidate_email:
-                send_rejection_email(candidate_name, candidate_email, job_title)
+                await asyncio.to_thread(send_rejection_email, candidate_name, candidate_email, job_title)
 
             logger.info(
                 f"Candidate {candidate_id} FAILED screening: "
@@ -192,32 +162,22 @@ def screening_decision_task(self, candidate_id: str) -> str:
         return candidate_id
 
     except Exception as exc:
-        if self.request.retries >= self.max_retries:
-            _handle_task_failure(self, exc, candidate_id)
-        raise
+        await _handle_task_failure("screening_decision_task", exc, candidate_id)
+        raise exc
 
 
 # ---------------------------------------------------------------------------
 # Task 3: Send Assessment Email
 # ---------------------------------------------------------------------------
 
-@celery_app.task(
-    bind=True,
-    max_retries=3,
-    default_retry_delay=15,
-    autoretry_for=(Exception,),
-    retry_backoff=True,
-    retry_backoff_max=180,
-    name="backend.tasks.pipeline_tasks.send_assessment_email_task",
-)
-def send_assessment_email_task(self, candidate_id: str) -> str:
+async def send_assessment_email_task(candidate_id: str) -> str:
     """
     If candidate passed screening, generate an assessment and send the email.
     If candidate failed, skip (return early).
     Returns candidate_id.
     """
     try:
-        candidate = sync_get_candidate(candidate_id)
+        candidate = await get_candidate(candidate_id)
         if not candidate:
             raise ValueError(f"Candidate {candidate_id} not found")
 
@@ -226,7 +186,7 @@ def send_assessment_email_task(self, candidate_id: str) -> str:
             return candidate_id
 
         job_id = candidate.get("jobId", "")
-        job = sync_get_job(job_id) if job_id else None
+        job = await get_job(job_id) if job_id else None
         job_title = job.get("title", "Position") if job else "Position"
 
         assessment_token = str(uuid.uuid4())
@@ -246,15 +206,15 @@ def send_assessment_email_task(self, candidate_id: str) -> str:
             "timeLimitMinutes": time_limit,
         }
 
-        sync_create_assessment(assessment_token, assessment_data)
+        await create_assessment(assessment_token, assessment_data)
 
         now = datetime.utcnow()
-        sync_update_candidate(candidate_id, {
+        await update_candidate(candidate_id, {
             "assessmentToken": assessment_token,
             "assessmentSentAt": now,
             "status": "ASSESSMENT_SENT",
         })
-        sync_append_state_history(candidate_id, "ASSESSMENT_SENT", {
+        await append_state_history(candidate_id, "ASSESSMENT_SENT", {
             "assessmentToken": assessment_token,
             "sentAt": now.isoformat(),
         })
@@ -263,7 +223,8 @@ def send_assessment_email_task(self, candidate_id: str) -> str:
         candidate_email = candidate.get("email", "")
 
         if candidate_email:
-            send_assessment_email(
+            await asyncio.to_thread(
+                send_assessment_email,
                 candidate_name=candidate_name,
                 candidate_email=candidate_email,
                 assessment_token=assessment_token,
@@ -275,9 +236,8 @@ def send_assessment_email_task(self, candidate_id: str) -> str:
         return candidate_id
 
     except Exception as exc:
-        if self.request.retries >= self.max_retries:
-            _handle_task_failure(self, exc, candidate_id)
-        raise
+        await _handle_task_failure("send_assessment_email_task", exc, candidate_id)
+        raise exc
 
 
 def _generate_assessment_questions(
@@ -398,36 +358,28 @@ def _generate_assessment_questions(
 # Task 4: Notify HR
 # ---------------------------------------------------------------------------
 
-@celery_app.task(
-    bind=True,
-    max_retries=3,
-    default_retry_delay=10,
-    autoretry_for=(Exception,),
-    retry_backoff=True,
-    retry_backoff_max=60,
-    name="backend.tasks.pipeline_tasks.notify_hr_task",
-)
-def notify_hr_task(self, candidate_id: str) -> str:
+async def notify_hr_task(candidate_id: str) -> str:
     """
     Send notification to HR about the candidate's pipeline status.
     Returns candidate_id.
     """
     try:
-        candidate = sync_get_candidate(candidate_id)
+        candidate = await get_candidate(candidate_id)
         if not candidate:
             raise ValueError(f"Candidate {candidate_id} not found")
 
         job_id = candidate.get("jobId", "")
-        job = sync_get_job(job_id) if job_id else None
+        job = await get_job(job_id) if job_id else None
         job_title = job.get("title", "Position") if job else "Position"
 
         candidate_name = candidate.get("name", "Unknown")
         status = candidate.get("status", "UNKNOWN")
         composite_score = candidate.get("compositeScore", 0)
 
-        hr_email = settings.sendgrid_from_email
+        hr_email = settings.email_user if settings.email_user else "hr@example.com"
 
-        send_hr_notification(
+        await asyncio.to_thread(
+            send_hr_notification,
             hr_email=hr_email,
             candidate_name=candidate_name,
             job_title=job_title,
@@ -439,25 +391,15 @@ def notify_hr_task(self, candidate_id: str) -> str:
         return candidate_id
 
     except Exception as exc:
-        if self.request.retries >= self.max_retries:
-            _handle_task_failure(self, exc, candidate_id)
-        raise
+        await _handle_task_failure("notify_hr_task", exc, candidate_id)
+        raise exc
 
 
 # ---------------------------------------------------------------------------
-# Task 5: Evaluate Assessment (standalone, triggered on submission)
+# Task 5: Evaluate Assessment
 # ---------------------------------------------------------------------------
 
-@celery_app.task(
-    bind=True,
-    max_retries=3,
-    default_retry_delay=30,
-    autoretry_for=(Exception,),
-    retry_backoff=True,
-    retry_backoff_max=300,
-    name="backend.tasks.pipeline_tasks.evaluate_assessment_task",
-)
-def evaluate_assessment_task(self, token: str) -> str:
+async def evaluate_assessment_task(token: str) -> str:
     """
     Evaluate a submitted assessment.
     Computes Dimensions 3, 5, 6 and the full composite score.
@@ -466,34 +408,31 @@ def evaluate_assessment_task(self, token: str) -> str:
     """
     candidate_id = ""
     try:
-        # Resolve candidate_id preemptively for robust error handling
-        assessment = sync_get_assessment(token)
+        # Resolve candidate_id preemptively
+        assessment = await get_assessment(token)
         if assessment:
             candidate_id = assessment.get("candidateId", "")
 
         from backend.agents.evaluator import evaluate_assessment
-        candidate_id = evaluate_assessment(token)
+        candidate_id = await asyncio.to_thread(evaluate_assessment, token)
         return candidate_id
     except Exception as exc:
-        if candidate_id and self.request.retries >= self.max_retries:
-            _handle_task_failure(self, exc, candidate_id)
-        raise
+        if candidate_id:
+            await _handle_task_failure("evaluate_assessment_task", exc, candidate_id)
+        raise exc
 
 
 # ---------------------------------------------------------------------------
-# Task 6: Check Engagement Deadlines (periodic)
+# Task 6: Check Engagement Deadlines
 # ---------------------------------------------------------------------------
 
-@celery_app.task(
-    name="backend.tasks.pipeline_tasks.check_engagement_deadline_task",
-)
-def check_engagement_deadline_task() -> int:
+async def check_engagement_deadline_task() -> int:
     """
-    Periodic task: Check for candidates who haven't submitted their assessment
+    Check for candidates who haven't submitted their assessment
     within the configurable deadline. Auto-reject them (Dimension 6).
     Returns count of auto-rejected candidates.
     """
-    candidates = sync_list_candidates_by_status("ASSESSMENT_SENT")
+    candidates = await list_candidates(status="ASSESSMENT_SENT")
     rejected_count = 0
     now = datetime.utcnow()
 
@@ -506,7 +445,7 @@ def check_engagement_deadline_task() -> int:
             sent_at = datetime.fromisoformat(sent_at)
 
         job_id = candidate.get("jobId", "")
-        job = sync_get_job(job_id) if job_id else None
+        job = await get_job(job_id) if job_id else None
         deadline_hours = 72
         if job:
             deadline_hours = job.get("autoRejectDeadlineHours", 72)
@@ -515,8 +454,8 @@ def check_engagement_deadline_task() -> int:
 
         if hours_elapsed > deadline_hours:
             candidate_id = candidate.get("id", "")
-            sync_update_candidate(candidate_id, {"status": "REJECTED"})
-            sync_append_state_history(candidate_id, "REJECTED", {
+            await update_candidate(candidate_id, {"status": "REJECTED"})
+            await append_state_history(candidate_id, "REJECTED", {
                 "reason": f"Auto-rejected: no assessment submission after {deadline_hours} hours",
                 "hoursElapsed": round(hours_elapsed, 1),
             })
@@ -526,7 +465,8 @@ def check_engagement_deadline_task() -> int:
             job_title = job.get("title", "Position") if job else "Position"
 
             if candidate_email:
-                send_rejection_email(
+                await asyncio.to_thread(
+                    send_rejection_email,
                     candidate_name=candidate_name,
                     candidate_email=candidate_email,
                     job_title=job_title,
@@ -544,17 +484,21 @@ def check_engagement_deadline_task() -> int:
 
 
 # ---------------------------------------------------------------------------
-# Pipeline Chain Builder
+# Pipeline Chain Builder (Deprecated fallback)
 # ---------------------------------------------------------------------------
 
 def build_pipeline_chain(candidate_id: str):
     """
-    Build the full Celery task chain for processing a new candidate.
-    Returns a Celery chain signature ready to be called.
+    Deprecated: use task_queue_service instead.
+    Provided for backwards compatibility.
     """
-    return chain(
-        parse_cv_task.s(candidate_id),
-        screening_decision_task.s(),
-        send_assessment_email_task.s(),
-        notify_hr_task.s(),
-    )
+    class DeprecatedChain:
+        def apply_async(self):
+            import asyncio
+            from backend.services import task_queue_service
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(task_queue_service.enqueue("process-cv", {"candidate_id": candidate_id}))
+            except RuntimeError:
+                pass
+    return DeprecatedChain()

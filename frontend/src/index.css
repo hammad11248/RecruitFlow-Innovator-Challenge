@@ -203,3 +203,110 @@
 .animate-pulse-glow {
   animation: pulse-glow 2s infinite ease-in-out;
 }
+
+/* ============================================
+   Candidate Portal Specific Styles
+   ============================================ */
+
+.candidate-portal-hero {
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.08) 0%,
+    rgba(139, 92, 246, 0.05) 50%,
+    rgba(52, 211, 153, 0.05) 100%
+  );
+}
+
+/* Gauge glow effect */
+@keyframes gauge-pulse {
+  0%, 100% { filter: drop-shadow(0 0 4px rgba(99, 102, 241, 0.2)); }
+  50% { filter: drop-shadow(0 0 12px rgba(99, 102, 241, 0.4)); }
+}
+
+.gauge-glow {
+  animation: gauge-pulse 3s ease-in-out infinite;
+}
+
+/* Score count-up animation helper */
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-count-up {
+  animation: count-up 0.4s ease-out forwards;
+}
+
+/* Leaderboard row rank glow for top 3 */
+.leaderboard-rank-1 {
+  box-shadow: inset 0 0 0 1px rgba(250, 204, 21, 0.15);
+  background: linear-gradient(90deg, rgba(250, 204, 21, 0.03) 0%, transparent 40%);
+}
+
+.leaderboard-rank-2 {
+  box-shadow: inset 0 0 0 1px rgba(156, 163, 175, 0.1);
+  background: linear-gradient(90deg, rgba(156, 163, 175, 0.02) 0%, transparent 40%);
+}
+
+.leaderboard-rank-3 {
+  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.1);
+  background: linear-gradient(90deg, rgba(251, 146, 60, 0.02) 0%, transparent 40%);
+}
+
+/* Stagger animation for lists */
+@keyframes stagger-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-stagger-in {
+  animation: stagger-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Dimension card hover lift */
+.dimension-card {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.3s ease,
+              border-color 0.3s ease;
+}
+
+.dimension-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px -4px rgba(99, 102, 241, 0.15);
+}
+
+/* Tab indicator animation */
+@keyframes tab-indicator {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+.tab-active-indicator::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  background: linear-gradient(90deg, #6366f1, #818cf8);
+  border-radius: 2px;
+  animation: tab-indicator 0.3s ease-out;
+}
+
+/* Search input focus enhancement */
+.glass-input:focus {
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+}
+
+/* Smooth number transition for tabular numbers */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Responsive drawer width on small screens */
+@media (max-width: 768px) {
+  .drawer-panel {
+    max-width: 100%;
+  }
+}
+

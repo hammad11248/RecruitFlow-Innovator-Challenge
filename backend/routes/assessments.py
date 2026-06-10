@@ -65,22 +65,14 @@ async def submit_assessment(submission: AssessmentSubmission):
         )
 
     try:
-        evaluate_assessment_task.delay(token)
+        from backend.services import task_queue_service
+        await task_queue_service.enqueue("score-candidate", {"token": token})
     except Exception as e:
         import logging
-        import threading
-        logging.getLogger(__name__).warning(f"Could not dispatch evaluation to Celery (Redis down?): {e}. Running evaluation in local thread fallback.")
-        
-        def run_eval_fallback():
-            try:
-                evaluate_assessment_task(token)
-            except Exception as fe:
-                logging.getLogger(__name__).error(f"Fallback evaluation failed for token {token}: {fe}")
-                
-        threading.Thread(target=run_eval_fallback, daemon=True).start()
+        logging.getLogger(__name__).error(f"Could not enqueue score-candidate task: {e}")
 
     return {
-        "message": "Assessment submitted successfully. Evaluation in progress (using fallback thread if Celery is down).",
+        "message": "Assessment submitted successfully. Evaluation in progress.",
         "token": token,
         "status": "ASSESSMENT_SUBMITTED",
     }

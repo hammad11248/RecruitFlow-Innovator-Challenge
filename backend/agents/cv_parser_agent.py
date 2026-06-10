@@ -1,6 +1,6 @@
 """
 CV Parser Agent — Downloads CVs from Firebase Storage, extracts text,
-uses Claude API to parse structured data, and computes Dimensions 1, 2, 4
+uses Google Gemini API to parse structured data, and computes Dimensions 1, 2, 4
 of the 6-dimension scoring rubric.
 """
 
@@ -12,7 +12,6 @@ import logging
 from typing import Any
 
 import google.generativeai as genai
-import pdfplumber
 from docx import Document as DocxDocument
 
 from backend.config import settings
@@ -47,17 +46,6 @@ def _configure_gemini():
 # Text Extraction
 # ---------------------------------------------------------------------------
 
-def extract_text_from_pdf(file_bytes: bytes) -> str:
-    """Extract all text from a PDF file using pdfplumber."""
-    text_parts = []
-    with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
-        for page in pdf.pages:
-            page_text = page.extract_text()
-            if page_text:
-                text_parts.append(page_text)
-    return "\n\n".join(text_parts)
-
-
 def extract_text_from_docx(file_bytes: bytes) -> str:
     """Extract all text from a DOCX file using python-docx."""
     doc = DocxDocument(io.BytesIO(file_bytes))
@@ -72,7 +60,18 @@ def extract_cv_text(file_bytes: bytes, filename: str) -> str:
     """Route to the correct text extractor based on file extension."""
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
     if ext == "pdf":
-        return extract_text_from_pdf(file_bytes)
+        from backend.firebase_admin_init import MOCK_MODE
+        if MOCK_MODE or not settings.is_gemini_configured:
+            return "Mock CV text for candidate Alex Rivera. 8 years React experience, built SaaS platforms, Senior Engineer."
+        
+        _configure_gemini()
+        uploaded_file = genai.upload_file(io.BytesIO(file_bytes), mime_type="application/pdf")
+        try:
+            txt_model = genai.GenerativeModel(model_name=settings.gemini_model)
+            txt_response = txt_model.generate_content([uploaded_file, "Extract and return the entire plain text content of this resume/CV. Do not add any formatting or commentary, just the raw text."])
+            return txt_response.text
+        finally:
+            genai.delete_file(uploaded_file.name)
     elif ext == "docx":
         return extract_text_from_docx(file_bytes)
     else:
@@ -80,7 +79,7 @@ def extract_cv_text(file_bytes: bytes, filename: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Claude CV Parsing
+# Gemini CV Parsing
 # ---------------------------------------------------------------------------
 
 CV_PARSE_SYSTEM_PROMPT = """You are an expert HR CV/resume parser. Your job is to extract structured data from a candidate's CV text.
@@ -121,24 +120,15 @@ Be thorough. Extract EVERY skill and technology mentioned or implied.
 """
 
 
-def parse_cv_with_claude(cv_text: str) -> dict[str, Any]:
+def parse_cv_with_claude(cv_text: str | bytes) -> dict[str, Any]:
     """
-    Send CV text to Google Gemini for structured data extraction.
+    Send CV text or PDF bytes to Google Gemini for structured data extraction.
     Returns the parsed JSON as a dict.
     """
-    if not settings.is_gemini_configured:
-        logger.warning("Gemini API key is not set. Generating mock CV parsed data.")
+    from backend.firebase_admin_init import MOCK_MODE
+    if MOCK_MODE or not settings.is_gemini_configured:
+        logger.warning("Gemini API key is not set or mock mode is active. Generating mock CV parsed data.")
         import random
-        # Extract email and name if possible from cv_text, or use defaults
-        name = "Alex Rivera"
-        email = "alex.r@example.com"
-        for line in cv_text.split("\n"):
-            if "@" in line and "." in line:
-                parts = [p.strip() for p in line.split() if "@" in p]
-                if parts:
-                    email = parts[0].strip("()[],:;")
-                    break
-        
         score = random.randint(72, 94)
         return {
             "skills": ["React", "TypeScript", "TailwindCSS", "Node.js", "Git", "REST APIs", "Python", "FastAPI"],
@@ -167,15 +157,29 @@ def parse_cv_with_claude(cv_text: str) -> dict[str, Any]:
         }
 
     _configure_gemini()
-    model = genai.GenerativeModel(
-        model_name=settings.gemini_model,
-        system_instruction=CV_PARSE_SYSTEM_PROMPT
-    )
-
-    response = model.generate_content(
-        f"Parse the following CV and extract structured data:\n\n---\n{cv_text}\n---",
-        generation_config={"response_mime_type": "application/json"}
-    )
+    
+    if isinstance(cv_text, bytes):
+        uploaded_file = genai.upload_file(io.BytesIO(cv_text), mime_type="application/pdf")
+        try:
+            model = genai.GenerativeModel(
+                model_name=settings.gemini_model,
+                system_instruction=CV_PARSE_SYSTEM_PROMPT
+            )
+            response = model.generate_content(
+                [uploaded_file, "Parse the following CV and extract structured data."],
+                generation_config={"response_mime_type": "application/json"}
+            )
+        finally:
+            genai.delete_file(uploaded_file.name)
+    else:
+        model = genai.GenerativeModel(
+            model_name=settings.gemini_model,
+            system_instruction=CV_PARSE_SYSTEM_PROMPT
+        )
+        response = model.generate_content(
+            f"Parse the following CV and extract structured data:\n\n---\n{cv_text}\n---",
+            generation_config={"response_mime_type": "application/json"}
+        )
 
     response_text = response.text.strip()
 
@@ -189,7 +193,6 @@ def parse_cv_with_claude(cv_text: str) -> dict[str, Any]:
 
     parsed = json.loads(response_text)
     return parsed
-
 
 
 # ---------------------------------------------------------------------------
@@ -231,16 +234,17 @@ def process_cv(candidate_id: str) -> str:
             logger.warning(f"Failed to extract CV text in mock mode: {e}. Using fallback mock CV text.")
             cv_text = "Mock CV text for candidate Alex Rivera. 8 years React experience, built SaaS platforms, Senior Engineer."
             filename = "cv.pdf"
+            file_bytes = b""
         else:
             raise
-
 
     if not cv_text or len(cv_text.strip()) < 100:
         sync_update_candidate(candidate_id, {"status": "PARSE_FAILED"})
         sync_append_state_history(candidate_id, "PARSE_FAILED", {"reason": "CV content is too short or blank."})
         raise ValueError("CV parse failed: text length less than 100 characters.")
 
-    parsed_json = parse_cv_with_claude(cv_text)
+    from backend.firebase_admin_init import MOCK_MODE
+    parsed_json = parse_cv_with_claude(file_bytes if not MOCK_MODE else cv_text)
 
     job_id = candidate.get("jobId", "")
     job = sync_get_job(job_id) if job_id else None

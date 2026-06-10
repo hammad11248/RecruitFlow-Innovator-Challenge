@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
-import { db, collection, query, onSnapshot, where, orderBy, limit as firestoreLimit } from '../firebase'
-
+import client from '../api/client'
 
 /**
- * Real-time candidates hook using Firestore onSnapshot.
- * Candidates appear/update instantly without polling.
+ * Real-time candidates hook using short-polling on GET /api/candidates.
+ * Polls every 5 seconds to track backend processing states.
  */
 export function useCandidates(filters = {}) {
   const [candidates, setCandidates] = useState([])
@@ -12,50 +11,56 @@ export function useCandidates(filters = {}) {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    setLoading(true)
-    setError(null)
+    let active = true
 
-    let q = collection(db, 'candidates')
-    const constraints = []
-
-    if (filters.status) {
-      constraints.push(where('status', '==', filters.status))
-    }
-    if (filters.jobId) {
-      constraints.push(where('jobId', '==', filters.jobId))
-    }
-
-    constraints.push(orderBy('createdAt', 'desc'))
-
-    if (filters.limit) {
-      constraints.push(firestoreLimit(filters.limit))
-    } else {
-      constraints.push(firestoreLimit(100))
-    }
-
-    q = query(q, ...constraints)
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const docs = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }))
-        setCandidates(docs)
-        setLoading(false)
-      },
-      (err) => {
-        console.error('Candidates snapshot error:', err)
-        setError(err.message)
-        setLoading(false)
+    const fetchCandidates = async (showLoading = false) => {
+      if (showLoading) {
+        setLoading(true)
       }
-    )
+      try {
+        const params = {}
+        if (filters.status) params.status = filters.status
+        if (filters.jobId) params.jobId = filters.jobId
+        if (filters.limit) params.limit = filters.limit
 
-    return unsubscribe
+        const response = await client.get('/candidates', { params })
+        if (!active) return
+
+        const list = response.data?.candidates || []
+        setCandidates(list)
+        setError(null)
+      } catch (err) {
+        if (!active) return
+        console.error('Failed to fetch candidates:', err)
+        setError(err.response?.data?.detail || err.message || 'Failed to fetch candidate data.')
+      } finally {
+        if (active) {
+          setLoading(false)
+        }
+      }
+    }
+
+    // Initial fetch
+    fetchCandidates(true)
+
+    // Short-polling interval every 5 seconds
+    const interval = setInterval(() => {
+      fetchCandidates(false)
+    }, 5000)
+
+    return () => {
+      active = false
+      clearInterval(interval)
+    }
   }, [filters.status, filters.jobId, filters.limit])
 
-  return { candidates, loading, error }
+  return {
+    candidates,
+    loading,
+    error,
+    empty: !loading && candidates.length === 0,
+    isEmpty: !loading && candidates.length === 0
+  }
 }
 
 export default useCandidates

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react'
-import axios from 'axios'
+import client from '../api/client'
 import { Upload, FileText, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
 
 export default function FileUpload({ onUploadSuccess }) {
@@ -8,6 +8,8 @@ export default function FileUpload({ onUploadSuccess }) {
   const [email, setEmail] = useState('')
   const [jobId, setJobId] = useState('job-frontend') // default job ID
   const [loading, setLoading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [candidateId, setCandidateId] = useState(null)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
   const [dragActive, setDragActive] = useState(false)
@@ -29,11 +31,12 @@ export default function FileUpload({ onUploadSuccess }) {
     setDragActive(false)
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const droppedFile = e.dataTransfer.files[0]
-      if (droppedFile.type === "application/pdf") {
+      const ext = droppedFile.name.split('.').pop().toLowerCase()
+      if (['pdf', 'docx'].includes(ext)) {
         setFile(droppedFile)
         setError(null)
       } else {
-        setError("Only PDF files are allowed")
+        setError("Only PDF and DOCX files are allowed")
       }
     }
   }
@@ -41,11 +44,12 @@ export default function FileUpload({ onUploadSuccess }) {
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0]
-      if (selectedFile.type === "application/pdf") {
+      const ext = selectedFile.name.split('.').pop().toLowerCase()
+      if (['pdf', 'docx'].includes(ext)) {
         setFile(selectedFile)
         setError(null)
       } else {
-        setError("Only PDF files are allowed")
+        setError("Only PDF and DOCX files are allowed")
       }
     }
   }
@@ -57,7 +61,7 @@ export default function FileUpload({ onUploadSuccess }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!file) {
-      setError("Please select a PDF CV file")
+      setError("Please select a CV file (PDF or DOCX)")
       return
     }
     if (!name.trim() || !email.trim()) {
@@ -66,8 +70,10 @@ export default function FileUpload({ onUploadSuccess }) {
     }
 
     setLoading(true)
+    setUploadProgress(0)
     setError(null)
     setSuccess(false)
+    setCandidateId(null)
 
     const formData = new FormData()
     formData.append('file', file)
@@ -76,11 +82,17 @@ export default function FileUpload({ onUploadSuccess }) {
     formData.append('jobId', jobId)
 
     try {
-      const response = await axios.post('http://127.0.0.1:8001/api/candidates/upload', formData, {
+      const response = await client.post('/candidates/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
+        },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+          setUploadProgress(percentCompleted)
         }
       })
+      const returnedCandidateId = response.data.candidateId || response.data.id
+      setCandidateId(returnedCandidateId)
       setSuccess(true)
       setFile(null)
       setName('')
@@ -89,6 +101,7 @@ export default function FileUpload({ onUploadSuccess }) {
         onUploadSuccess(response.data)
       }
     } catch (err) {
+      console.error("Upload error details:", err)
       const errMsg = err.response?.data?.detail || err.message || "Failed to upload candidate CV."
       setError(errMsg)
     } finally {
@@ -111,9 +124,16 @@ export default function FileUpload({ onUploadSuccess }) {
       )}
 
       {success && (
-        <div className="flex items-center gap-2 p-3.5 bg-emerald-500/10 border border-emerald-500/25 rounded-lg text-emerald-400 text-sm mb-4">
-          <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-          <span>CV uploaded and parsed successfully!</span>
+        <div className="flex flex-col gap-1 p-3.5 bg-emerald-500/10 border border-emerald-500/25 rounded-lg text-emerald-400 text-sm mb-4">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+            <span className="font-semibold">CV uploaded and parsed successfully!</span>
+          </div>
+          {candidateId && (
+            <p className="text-xs text-slate-400 ml-6">
+              Candidate ID: <span className="font-mono bg-slate-950 px-1.5 py-0.5 rounded select-all text-slate-200 border border-slate-850">{candidateId}</span>
+            </p>
+          )}
         </div>
       )}
 
@@ -126,7 +146,7 @@ export default function FileUpload({ onUploadSuccess }) {
             onChange={(e) => setName(e.target.value)}
             disabled={loading}
             placeholder="John Doe"
-            className="w-full bg-slate-950 border border-slate-850 hover:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3.5 py-2 text-sm text-slate-200 placeholder-slate-600 transition-all outline-none"
+            className="w-full bg-slate-950 border border-slate-850 hover:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3.5 py-2 text-sm text-slate-200 placeholder-slate-650 transition-all outline-none"
             required
           />
         </div>
@@ -139,7 +159,7 @@ export default function FileUpload({ onUploadSuccess }) {
             onChange={(e) => setEmail(e.target.value)}
             disabled={loading}
             placeholder="john.doe@example.com"
-            className="w-full bg-slate-950 border border-slate-850 hover:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3.5 py-2 text-sm text-slate-200 placeholder-slate-600 transition-all outline-none"
+            className="w-full bg-slate-950 border border-slate-850 hover:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3.5 py-2 text-sm text-slate-200 placeholder-slate-650 transition-all outline-none"
             required
           />
         </div>
@@ -174,7 +194,7 @@ export default function FileUpload({ onUploadSuccess }) {
             ref={fileInputRef}
             type="file"
             onChange={handleFileChange}
-            accept=".pdf"
+            accept=".pdf,.docx"
             disabled={loading}
             className="hidden"
           />
@@ -187,9 +207,9 @@ export default function FileUpload({ onUploadSuccess }) {
             </div>
           ) : (
             <div className="flex flex-col items-center text-center">
-              <Upload className="w-10 h-10 text-slate-600 mb-2" />
+              <Upload className="w-10 h-10 text-slate-650 mb-2" />
               <span className="text-sm font-medium text-slate-400">Drag & drop CV or <span className="text-indigo-500 hover:text-indigo-400 font-semibold">Browse</span></span>
-              <span className="text-xs text-slate-500 mt-1">Only PDF files are supported</span>
+              <span className="text-xs text-slate-550 mt-1">Only PDF and DOCX files are supported</span>
             </div>
           )}
         </div>
@@ -197,13 +217,18 @@ export default function FileUpload({ onUploadSuccess }) {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:opacity-50 text-white font-medium rounded-lg py-2.5 text-sm transition-all shadow-lg shadow-indigo-600/10 flex items-center justify-center gap-1.5"
+          className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:opacity-50 text-white font-medium rounded-lg py-2.5 text-sm transition-all shadow-lg shadow-indigo-600/10 flex items-center justify-center gap-1.5 cursor-pointer text-center"
         >
           {loading ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Ingesting & Parsing CV...
-            </>
+            <div className="w-full flex flex-col items-center gap-1">
+              <div className="flex items-center gap-1.5 justify-center">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Uploading & parsing CV ({uploadProgress}%)</span>
+              </div>
+              <div className="w-3/4 bg-slate-950/50 rounded-full h-1.5 overflow-hidden mt-1">
+                <div className="bg-indigo-400 h-full rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+              </div>
+            </div>
           ) : (
             "Submit Application"
           )}

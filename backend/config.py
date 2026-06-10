@@ -49,25 +49,6 @@ class Settings(BaseSettings):
         description="Gmail App Password for SMTP"
     )
 
-    # --- Anthropic Claude API (Legacy) ---
-    anthropic_api_key: str = Field(
-        default="",
-        description="Legacy Anthropic API key"
-    )
-    anthropic_model: str = Field(
-        default="claude-sonnet-4-20250514",
-        description="Legacy Claude model identifier"
-    )
-
-    # --- SendGrid Email (Legacy) ---
-    sendgrid_api_key: str = Field(
-        default="",
-        description="Legacy SendGrid API key"
-    )
-    sendgrid_from_email: str = Field(
-        default="noreply@example.com",
-        description="Legacy Sender email address for SendGrid"
-    )
 
     # --- Google Calendar API ---
     google_calendar_credentials_path: str = Field(
@@ -79,11 +60,6 @@ class Settings(BaseSettings):
         description="Google Calendar ID for interview scheduling"
     )
 
-    # --- Redis / Celery ---
-    redis_url: str = Field(
-        default="redis://localhost:6379/0",
-        description="Redis URL for Celery broker"
-    )
 
     # --- Application URLs ---
     frontend_url: str = Field(
@@ -141,13 +117,6 @@ class Settings(BaseSettings):
         passw = self.email_pass
         return bool(user and user.strip() and "your-email" not in user and passw and passw.strip() and "your-gmail" not in passw)
 
-    @property
-    def is_anthropic_configured(self) -> bool:
-        return self.is_gemini_configured
-
-    @property
-    def is_sendgrid_configured(self) -> bool:
-        return self.is_email_configured
 
     model_config = {
         "env_file": env_path,

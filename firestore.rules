@@ -18,58 +18,61 @@ service cloud.firestore {
     }
 
     // ------------------------------------
-    // Candidates Collection
+    // Candidates Collection Rules
     // ------------------------------------
     match /candidates/{candidateId} {
-      // Candidates need to be able to read their own document by ID to track progress
+      // Public read-only access (get by unique candidate ID) for candidate-portal status display
       allow get: if true;
-      allow list, write: if isHRUser();
+
+      // Strict authenticated access for listing all candidates
+      allow list: if isHRUser();
+
+      // Write parameters (create, update, delete) restricted to HR or isolated candidate-matching actions
+      allow create: if isHRUser() || (isAuthenticated() && request.auth.uid == candidateId);
+      allow update, delete: if isHRUser() || (isAuthenticated() && request.auth.uid == candidateId);
     }
 
     // ------------------------------------
-    // Assessments Collection
+    // Assessments Collection Rules
     // ------------------------------------
     match /assessments/{token} {
-      // HR users can read and write all assessments
-      allow read, write: if isHRUser();
+      // Candidates can retrieve details of their specific assessment by token
+      allow get: if true;
 
-      // Candidates can read their own assessment by token (public read for token-based access)
-      allow read: if true;
-
-      // Anyone can write answers (submission) — validated server-side
+      // Candidates submit answers (which update the assessment document), server validates during update
       allow update: if true;
+
+      // Strict authenticated authorization for writing or listing assessments
+      allow list, create, delete: if isHRUser();
     }
 
     // ------------------------------------
-    // Jobs Collection
+    // Jobs Collection Rules
     // ------------------------------------
     match /jobs/{jobId} {
-      // Anyone can read active jobs (for the Apply page job selector)
+      // Anyone can read active job positions for the apply portal job selector
       allow read: if true;
 
-      // Only HR users can create, update, delete jobs
+      // Only authenticated HR users can write jobs
       allow write: if isHRUser();
     }
 
     // ------------------------------------
-    // HR Users Collection
+    // HR Users Profile Collection Rules
     // ------------------------------------
     match /hr_users/{uid} {
-      // Users can read their own profile
-      allow read: if isAuthenticated() && request.auth.uid == uid;
-
-      // Only the user themselves or an admin can write
-      allow write: if isAuthenticated() && request.auth.uid == uid;
+      // Strict dynamic user isolation: authenticated user can only access/manage their own profile
+      allow read, write: if isAuthenticated() && request.auth.uid == uid;
     }
 
     // ------------------------------------
-    // Errors Collection (internal logging)
+    // Internal Error Logs Rules
     // ------------------------------------
     match /errors/{errorId} {
-      // Only HR users can read error logs
+      // Only authenticated HR users can inspect error logs
       allow read: if isHRUser();
 
-      // Server-side writes only (via Admin SDK)
+      // Writes blocked for standard clients (reserved for cloud server SDK)
       allow write: if false;
     }
   }

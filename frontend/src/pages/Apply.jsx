@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { storage, db, ref, uploadBytesResumable, getDownloadURL, doc, onSnapshot } from '../firebase'
 import client from '../api/client'
 import StatusPill from '../components/StatusPill'
-
+import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, User, Mail, Phone, Briefcase, Sparkles, ChevronRight, Zap } from 'lucide-react'
 
 const PIPELINE_STEPS = [
   { key: 'UPLOADED', label: 'Uploaded', icon: '📄' },
@@ -12,7 +12,7 @@ const PIPELINE_STEPS = [
   { key: 'ASSESSMENT_SENT', label: 'Assessment Sent', icon: '📝' },
   { key: 'ASSESSMENT_SUBMITTED', label: 'Submitted', icon: '📤' },
   { key: 'SCORED', label: 'Scored', icon: '📊' },
-  { key: 'INTERVIEW_SCHEDULED', label: 'Interview', icon: '📅' },
+  { key: 'INTERVIEW_SCHEDULED', label: 'Interview Scheduled', icon: '📅' },
 ]
 
 export default function Apply() {
@@ -28,15 +28,20 @@ export default function Apply() {
   const [candidateStatus, setCandidateStatus] = useState(null)
   const [error, setError] = useState('')
   const [step, setStep] = useState('form') // form | uploading | tracking
+  const [dragActive, setDragActive] = useState(false)
 
   // Fetch available jobs
   useEffect(() => {
-    client.get('/jobs').then((res) => {
-      setJobs(res.data.jobs || [])
-      if (res.data.jobs?.length > 0) {
-        setJobId(res.data.jobs[0].id)
-      }
-    }).catch(() => {})
+    client.get('/jobs')
+      .then((res) => {
+        setJobs(res.data.jobs || [])
+        if (res.data.jobs?.length > 0) {
+          setJobId(res.data.jobs[0].id)
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load jobs:", err)
+      })
   }, [])
 
   // Real-time candidate status tracking via onSnapshot
@@ -52,6 +57,32 @@ export default function Apply() {
 
     return unsubscribe
   }, [candidateId])
+
+  const handleDrag = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true)
+    } else if (e.type === "dragleave") {
+      setDragActive(false)
+    }
+  }
+
+  const handleDrop = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const droppedFile = e.dataTransfer.files[0]
+      const ext = droppedFile.name.split('.').pop().toLowerCase()
+      if (['pdf', 'docx'].includes(ext)) {
+        setFile(droppedFile)
+        setError('')
+      } else {
+        setError('Please upload a PDF or DOCX file.')
+      }
+    }
+  }
 
   const handleFileChange = (e) => {
     const selected = e.target.files[0]
@@ -133,190 +164,403 @@ export default function Apply() {
   }
 
   return (
-    <div className="page-container min-h-screen flex items-center justify-center px-4 py-12" id="apply-page">
-      {/* Background decoration */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary-500/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-emerald-500/5 rounded-full blur-3xl" />
-      </div>
+    <div className="min-h-screen bg-[#0F0F1A] text-slate-100 font-sans relative overflow-hidden px-4 py-8 md:py-16">
+      {/* Background glowing effects */}
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-violet-500/5 rounded-full blur-[120px] pointer-events-none" />
 
-      <div className="relative w-full max-w-2xl animate-slide-up">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+      `}</style>
+
+      <div className="max-w-6xl mx-auto z-10 relative">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-cyan-500 shadow-lg shadow-primary-500/30 mb-4">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-full text-xs font-semibold mb-4 tracking-wide uppercase">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Autonomous Ingestion Pipeline</span>
           </div>
-          <h1 className="text-3xl font-bold text-surface-50 tracking-tight">Apply Now</h1>
-          <p className="text-surface-400 mt-2">Submit your CV and track your application in real-time</p>
+          <h1 className="text-4xl md:text-5xl font-extrabold text-slate-50 tracking-tight">
+            Apply to <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-cyan-400 bg-clip-text text-transparent">RecruitFlow</span>
+          </h1>
+          <p className="text-slate-400 mt-3 text-base md:text-lg max-w-lg mx-auto">
+            Submit your credentials and monitor the real-time evaluation process.
+          </p>
         </div>
 
-        {/* Step: Application Form */}
-        {step === 'form' && (
-          <div className="glass-card p-8">
-            <form onSubmit={handleSubmit} className="space-y-5" id="apply-form">
-              {error && (
-                <div className="flex items-center gap-3 bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3 animate-fade-in">
-                  <svg className="w-5 h-5 text-rose-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                  <span className="text-rose-300 text-sm">{error}</span>
+        {/* High-tech Split Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* LEFT COLUMN: UPLOAD WORKFLOW */}
+          <div className="lg:col-span-5 bg-[#1A1A2E]/40 backdrop-blur-xl border border-slate-800 rounded-xl p-6 md:p-8 shadow-[0_0_30px_rgba(99,102,241,0.05)]">
+            {step === 'form' && (
+              <form onSubmit={handleSubmit} className="space-y-6" id="apply-form">
+                <div className="border-b border-slate-800 pb-4 mb-4">
+                  <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                    <User className="w-5 h-5 text-indigo-400" />
+                    Applicant Credentials
+                  </h2>
                 </div>
-              )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-sm font-medium text-surface-300 mb-2" htmlFor="apply-name">Full Name</label>
-                  <input id="apply-name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="John Doe" required className="glass-input w-full" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-surface-300 mb-2" htmlFor="apply-email">Email</label>
-                  <input id="apply-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="john@example.com" required className="glass-input w-full" />
-                </div>
-              </div>
+                {error && (
+                  <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-xl p-3.5 animate-fade-in">
+                    <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                    <span className="text-red-300 text-xs font-medium">{error}</span>
+                  </div>
+                )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-sm font-medium text-surface-300 mb-2" htmlFor="apply-phone">Phone (optional)</label>
-                  <input id="apply-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 (555) 123-4567" className="glass-input w-full" />
+                {/* Floating Label: Full Name */}
+                <div className="relative z-0 w-full group">
+                  <input
+                    type="text"
+                    id="apply-name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    placeholder=" "
+                    className="block py-2.5 px-0 w-full text-sm text-slate-200 bg-transparent border-0 border-b-2 border-slate-800 appearance-none focus:outline-none focus:ring-0 focus:border-indigo-500 transition-all peer"
+                  />
+                  <label
+                    htmlFor="apply-name"
+                    className="peer-focus:font-medium absolute text-sm text-slate-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 peer-focus:text-indigo-400 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
+                  >
+                    Full Name
+                  </label>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-surface-300 mb-2" htmlFor="apply-job">Position</label>
-                  <select id="apply-job" value={jobId} onChange={(e) => setJobId(e.target.value)} className="glass-input w-full">
-                    {jobs.length === 0 && <option value="">No positions available</option>}
-                    {jobs.map((job) => (
-                      <option key={job.id} value={job.id}>{job.title}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
 
-              {/* File Upload Area */}
-              <div>
-                <label className="block text-sm font-medium text-surface-300 mb-2">Upload CV</label>
-                <div className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-300 cursor-pointer ${file ? 'border-primary-500/50 bg-primary-500/5' : 'border-surface-600/40 hover:border-surface-500/50 hover:bg-surface-800/30'}`}>
-                  <input type="file" accept=".pdf,.docx" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" id="cv-upload" />
-                  {file ? (
-                    <div className="flex items-center justify-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-primary-500/20 flex items-center justify-center">
-                        <svg className="w-5 h-5 text-primary-400" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                      <div className="text-left">
-                        <p className="text-surface-200 font-medium">{file.name}</p>
-                        <p className="text-surface-500 text-sm">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <svg className="w-10 h-10 mx-auto text-surface-500 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                {/* Floating Label: Email */}
+                <div className="relative z-0 w-full group">
+                  <input
+                    type="email"
+                    id="apply-email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    placeholder=" "
+                    className="block py-2.5 px-0 w-full text-sm text-slate-200 bg-transparent border-0 border-b-2 border-slate-800 appearance-none focus:outline-none focus:ring-0 focus:border-indigo-500 transition-all peer"
+                  />
+                  <label
+                    htmlFor="apply-email"
+                    className="peer-focus:font-medium absolute text-sm text-slate-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 peer-focus:text-indigo-400 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
+                  >
+                    Email Address
+                  </label>
+                </div>
+
+                {/* Floating Label: Phone */}
+                <div className="relative z-0 w-full group">
+                  <input
+                    type="tel"
+                    id="apply-phone"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder=" "
+                    className="block py-2.5 px-0 w-full text-sm text-slate-200 bg-transparent border-0 border-b-2 border-slate-800 appearance-none focus:outline-none focus:ring-0 focus:border-indigo-500 transition-all peer"
+                  />
+                  <label
+                    htmlFor="apply-phone"
+                    className="peer-focus:font-medium absolute text-sm text-slate-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 peer-focus:text-indigo-400 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
+                  >
+                    Phone Number (Optional)
+                  </label>
+                </div>
+
+                {/* Selector Dropdown: Positions */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider" htmlFor="apply-job">Apply for Position</label>
+                  <div className="relative">
+                    <select
+                      id="apply-job"
+                      value={jobId}
+                      onChange={(e) => setJobId(e.target.value)}
+                      className="block w-full px-4 py-3 bg-[#16213E]/50 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-transparent appearance-none cursor-pointer text-sm transition-all"
+                    >
+                      {jobs.length === 0 && <option value="">No positions available</option>}
+                      {jobs.map((job) => (
+                        <option key={job.id} value={job.id} className="bg-[#1A1A2E]">
+                          {job.title}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+                      <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
                       </svg>
-                      <p className="text-surface-300 font-medium">Drop your CV here or click to browse</p>
-                      <p className="text-surface-500 text-sm mt-1">PDF or DOCX, max 10MB</p>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              <button type="submit" disabled={!file || uploading} className="glass-button w-full disabled:opacity-50 disabled:cursor-not-allowed" id="apply-submit">
-                Submit Application
-              </button>
-            </form>
-          </div>
-        )}
-
-        {/* Step: Uploading Progress */}
-        {step === 'uploading' && (
-          <div className="glass-card p-10 text-center animate-fade-in">
-            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-primary-500/20 flex items-center justify-center">
-              <svg className="animate-spin w-8 h-8 text-primary-400" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-            </div>
-            <h2 className="text-xl font-bold text-surface-50 mb-4">Uploading your CV...</h2>
-            <div className="w-full bg-surface-700/50 rounded-full h-3 mb-3 overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-primary-600 to-primary-400 rounded-full transition-all duration-300 progress-bar-animated" style={{ width: `${uploadProgress}%` }} />
-            </div>
-            <p className="text-primary-400 font-semibold text-lg">{uploadProgress}%</p>
-          </div>
-        )}
-
-        {/* Step: Pipeline Tracking */}
-        {step === 'tracking' && candidateStatus && (
-          <div className="glass-card p-8 animate-fade-in" id="tracking-panel">
-            <div className="text-center mb-8">
-              <h2 className="text-xl font-bold text-surface-50">Application Submitted! 🎉</h2>
-              <p className="text-surface-400 mt-2">Track your progress in real-time below</p>
-            </div>
-
-            {/* Status Badge */}
-            <div className="flex justify-center mb-8">
-              <StatusPill status={candidateStatus.status} size="lg" />
-            </div>
-
-            {/* Pipeline Progress */}
-            <div className="space-y-4 max-w-md mx-auto">
-              {PIPELINE_STEPS.map((pStep, idx) => {
-                const currentIdx = getCurrentStepIndex()
-                const isComplete = idx <= currentIdx
-                const isCurrent = idx === currentIdx
-                const isFailed = candidateStatus.status === 'AI_SCREENING_FAILED' || candidateStatus.status === 'REJECTED'
-
-                return (
-                  <div key={pStep.key} className="flex items-start gap-4">
-                    {/* Line + Dot */}
-                    <div className="flex flex-col items-center">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg border-2 transition-all duration-500 ${isComplete ? 'bg-primary-500/20 border-primary-500 text-primary-400' : isFailed && idx > currentIdx ? 'bg-rose-500/10 border-rose-500/30 text-rose-500/50' : 'bg-surface-800 border-surface-600 text-surface-500'} ${isCurrent ? 'ring-2 ring-primary-500/30 animate-pulse-glow' : ''}`}>
-                        {pStep.icon}
-                      </div>
-                      {idx < PIPELINE_STEPS.length - 1 && (
-                        <div className={`w-0.5 h-12 transition-all duration-500 ${isComplete ? 'bg-primary-500/40' : 'bg-surface-700'}`} />
-                      )}
-                    </div>
-                    {/* Label */}
-                    <div className="pt-2">
-                      <p className={`font-medium transition-colors duration-300 ${isComplete ? 'text-surface-100' : 'text-surface-500'}`}>{pStep.label}</p>
-                      {isCurrent && (
-                        <p className="text-primary-400 text-sm mt-0.5 animate-fade-in">Current step</p>
-                      )}
                     </div>
                   </div>
-                )
-              })}
-            </div>
+                </div>
 
-            {/* Score if available */}
-            {candidateStatus.screeningScore > 0 && (
-              <div className="mt-8 p-4 bg-surface-800/50 rounded-xl border border-surface-700/30">
-                <p className="text-surface-400 text-sm">Screening Score</p>
-                <p className="text-3xl font-bold text-primary-400">{Math.round(candidateStatus.screeningScore)}<span className="text-surface-500 text-lg">/100</span></p>
-              </div>
+                {/* CV Upload Drag-Drop Area */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Upload CV Document</label>
+                  <div
+                    onDragEnter={handleDrag}
+                    onDragOver={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDrop={handleDrop}
+                    className={`relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-300 overflow-hidden ${
+                      file 
+                        ? 'border-indigo-500 bg-indigo-500/5 shadow-[0_0_15px_rgba(99,102,241,0.05)]' 
+                        : 'border-slate-800 hover:border-transparent bg-slate-900/30'
+                    } group`}
+                  >
+                    {/* Gradient background on hover */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-violet-500/5 to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                    
+                    {/* Glowing border simulation on hover */}
+                    <div className="absolute -inset-[2px] rounded-xl bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-500 opacity-0 group-hover:opacity-100 blur-[2px] -z-10 transition-opacity duration-500" />
+                    
+                    <input
+                      type="file"
+                      accept=".pdf,.docx"
+                      onChange={handleFileChange}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      id="cv-upload"
+                    />
+                    
+                    {file ? (
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <div className="w-12 h-12 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                          <FileText className="w-6 h-6 text-indigo-400" />
+                        </div>
+                        <p className="text-sm font-semibold text-slate-200 max-w-[220px] truncate">{file.name}</p>
+                        <p className="text-xs text-slate-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center">
+                        <Upload className="w-8 h-8 text-slate-500 mb-3 group-hover:text-indigo-400 group-hover:scale-110 transition-all duration-300" />
+                        <p className="text-sm font-medium text-slate-300">
+                          Drag CV here or <span className="text-indigo-400 font-semibold group-hover:underline">browse</span>
+                        </p>
+                        <p className="text-xs text-slate-550 mt-1">PDF or DOCX (Max 10MB)</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={!file || uploading}
+                  className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:opacity-50 text-white font-medium rounded-lg py-3 text-sm transition-all shadow-lg shadow-indigo-600/10 flex items-center justify-center gap-1.5 cursor-pointer text-center"
+                  id="apply-submit"
+                >
+                  Submit Application
+                </button>
+              </form>
             )}
 
-            {candidateStatus.status === 'AI_SCREENING_FAILED' && (
-              <div className="mt-6 p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl text-center">
-                <p className="text-rose-300 font-medium">Unfortunately, your profile didn't match the current requirements.</p>
-                <p className="text-surface-400 text-sm mt-1">We encourage you to apply for other positions.</p>
-              </div>
-            )}
+            {/* Application Success Summary (Locked Left State after Submission) */}
+            {(step === 'uploading' || step === 'tracking') && (
+              <div className="space-y-6">
+                <div className="border-b border-slate-800 pb-4 mb-4">
+                  <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400 animate-pulse" />
+                    Application Ingested
+                  </h2>
+                </div>
 
-            {candidateStatus.status === 'ASSESSMENT_SENT' && candidateStatus.assessmentToken && (
-              <div className="mt-6 text-center">
-                <Link to={`/assessment/${candidateStatus.assessmentToken}`} className="glass-button inline-block" id="start-assessment-btn">
-                  Start Assessment →
-                </Link>
+                <div className="bg-[#16213E]/40 border border-slate-800 rounded-xl p-5 space-y-4 shadow-[0_0_15px_rgba(99,102,241,0.03)]">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Applicant</span>
+                    <span className="text-sm font-semibold text-slate-200">{name}</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Email Address</span>
+                    <span className="text-sm font-semibold text-slate-200">{email}</span>
+                  </div>
+                  {phone && (
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Phone</span>
+                      <span className="text-sm font-semibold text-slate-200">{phone}</span>
+                    </div>
+                  )}
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Position Code</span>
+                    <span className="text-sm font-mono text-indigo-400 font-semibold">{jobId}</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-center justify-center p-6 bg-slate-900/40 border border-dashed border-slate-850 rounded-xl">
+                  <Zap className="w-6 h-6 text-indigo-400 mb-2 animate-bounce" />
+                  <p className="text-xs text-slate-400 text-center font-medium">
+                    Evaluation status updates live. Keep this page open to track AI parsing and score outputs.
+                  </p>
+                </div>
               </div>
             )}
           </div>
-        )}
 
-        {/* HR login link */}
-        <p className="text-center text-surface-500 text-sm mt-6">
-          HR Manager? <Link to="/login" className="text-primary-400 hover:text-primary-300 transition-colors">Login here →</Link>
+          {/* RIGHT COLUMN: REAL-TIME PIPELINE OR PROGRESS TRACKING */}
+          <div className="lg:col-span-7 bg-[#1A1A2E]/30 backdrop-blur-md border border-slate-800 rounded-xl p-6 md:p-8 shadow-[0_0_20px_rgba(0,0,0,0.2)]">
+            
+            {/* Step: Form Input - Show Pipeline Preview */}
+            {step === 'form' && (
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 border-b border-slate-800 pb-4 mb-4">
+                  <div className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                  <h3 className="text-lg font-bold text-slate-100 tracking-tight">AI Evaluation Stream</h3>
+                </div>
+                <p className="text-slate-400 text-sm leading-relaxed">
+                  Submit your resume to trigger the RecruitFlow evaluation pipeline. Once submitted, our system runs the following autonomous procedures:
+                </p>
+
+                <div className="space-y-4 relative before:absolute before:left-5 before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-855">
+                  <div className="flex items-start gap-4 relative group">
+                    <div className="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-semibold z-10 hover:bg-indigo-500/20 transition-colors">
+                      1
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-semibold text-slate-200">Native Resume Parsing</h4>
+                      <p className="text-xs text-slate-450 mt-0.5">Gemini processes the PDF/DOCX to extract skills, seniority parameters, and experience records.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4 relative group">
+                    <div className="w-10 h-10 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 font-semibold z-10 hover:bg-violet-500/20 transition-colors">
+                      2
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-semibold text-slate-200">6-Dimension Matrix Scoring</h4>
+                      <p className="text-xs text-slate-450 mt-0.5">Scoring metrics mapped across Technical capability, Fit, CV clarity, and Seniority match.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4 relative group">
+                    <div className="w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 font-semibold z-10 hover:bg-cyan-500/20 transition-colors">
+                      3
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-semibold text-slate-200">Automated Screening</h4>
+                      <p className="text-xs text-slate-450 mt-0.5">Candidates meeting threshold standards immediately pass screening to the technical assessment.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4 relative group">
+                    <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-semibold z-10 hover:bg-emerald-500/20 transition-colors">
+                      4
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-semibold text-slate-200">Code Sandbox Test</h4>
+                      <p className="text-xs text-slate-450 mt-0.5">Personalized testing environments built in React and Python generated for sandbox review.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step: Uploading - Show Glowing Upload Percentage Track */}
+            {step === 'uploading' && (
+              <div className="flex flex-col items-center justify-center py-20 animate-fade-in">
+                <div className="relative w-28 h-28 flex items-center justify-center mb-6">
+                  {/* Outer spinning ring */}
+                  <div className="absolute inset-0 rounded-full border-4 border-indigo-500/10 border-t-indigo-500 animate-spin" />
+                  {/* Glowing core */}
+                  <div className="absolute inset-2 bg-gradient-to-tr from-indigo-500 to-violet-500 rounded-full blur-[4px] opacity-10" />
+                  <span className="text-xl font-bold text-slate-100 z-10">{uploadProgress}%</span>
+                </div>
+                <h3 className="text-lg font-bold text-slate-100 mb-2">Ingesting CV & Initiating Pipelines</h3>
+                <p className="text-slate-450 text-xs max-w-xs text-center leading-relaxed">
+                  Uploading files to database repository. Our LLM will process the document text shortly.
+                </p>
+              </div>
+            )}
+
+            {/* Step: Tracking - Show Real-Time Pipeline Status Rows & Pulses */}
+            {step === 'tracking' && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-ping" />
+                    <h3 className="text-lg font-bold text-slate-100 tracking-wide">Live Pipeline Ingestion</h3>
+                  </div>
+                  <StatusPill status={candidateStatus?.status} size="md" />
+                </div>
+
+                {/* Screening score (macro metric block) */}
+                {candidateStatus?.screeningScore > 0 && (
+                  <div className="p-6 bg-[#1A1A2E]/50 border border-slate-800 rounded-xl flex items-center justify-between shadow-[0_0_20px_rgba(99,102,241,0.03)] animate-slide-up">
+                    <div>
+                      <p className="text-xs text-slate-400 uppercase font-semibold tracking-wider">AI Evaluation Score</p>
+                      <p className="text-3xl font-extrabold text-indigo-400 mt-1">
+                        {Math.round(candidateStatus.screeningScore)}
+                        <span className="text-slate-500 text-sm font-normal"> / 100</span>
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-xl">
+                      🚀
+                    </div>
+                  </div>
+                )}
+
+                {/* Candidate Status Rows & Progress Lines */}
+                <div className="space-y-5 relative before:absolute before:left-5 before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-855">
+                  {PIPELINE_STEPS.map((pStep, idx) => {
+                    const currentIdx = getCurrentStepIndex()
+                    const isComplete = idx <= currentIdx
+                    const isCurrent = idx === currentIdx
+                    const isFailed = candidateStatus?.status === 'AI_SCREENING_FAILED' || candidateStatus?.status === 'REJECTED'
+
+                    return (
+                      <div key={pStep.key} className="flex items-start gap-4 relative animate-fade-in">
+                        {/* Status Light dot */}
+                        <div
+                          className={`w-10 h-10 rounded-full flex items-center justify-center text-base border-2 z-10 transition-all duration-500 ${
+                            isComplete
+                              ? 'bg-indigo-500/20 border-indigo-500 text-indigo-400'
+                              : isFailed && idx > currentIdx
+                              ? 'bg-red-500/15 border-red-500/30 text-red-500/60'
+                              : 'bg-[#16213E] border-slate-800 text-slate-550'
+                          } ${isCurrent ? 'ring-4 ring-indigo-500/10 animate-pulse' : ''}`}
+                        >
+                          {pStep.icon}
+                        </div>
+                        <div className="pt-2">
+                          <h4 className={`text-sm font-semibold transition-colors duration-300 ${isComplete ? 'text-slate-200' : 'text-slate-500'}`}>
+                            {pStep.label}
+                          </h4>
+                          {isCurrent && (
+                            <p className="text-xs text-indigo-400 mt-0.5 animate-pulse">Processing active evaluation criteria...</p>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Failed Panel */}
+                {candidateStatus?.status === 'AI_SCREENING_FAILED' && (
+                  <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-center shadow-[0_0_15px_rgba(239,68,68,0.05)]">
+                    <p className="text-red-400 font-semibold text-sm">Pipeline Concluded</p>
+                    <p className="text-slate-400 text-xs mt-1 leading-relaxed">
+                      Unfortunately, your profile did not match the required screening parameters for this role.
+                    </p>
+                  </div>
+                )}
+
+                {/* Assessment Launch Call To Action */}
+                {candidateStatus?.status === 'ASSESSMENT_SENT' && candidateStatus.assessmentToken && (
+                  <div className="mt-6 text-center shadow-[0_0_20px_rgba(99,102,241,0.1)]">
+                    <Link
+                      to={`/assessment/${candidateStatus.assessmentToken}`}
+                      className="block w-full text-center bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-medium py-3 rounded-lg text-sm transition-all shadow-md animate-pulse cursor-pointer"
+                      id="start-assessment-btn"
+                    >
+                      Launch Sandbox Coding Test →
+                    </Link>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer Login Navigation */}
+        <p className="text-center text-slate-550 text-xs mt-10">
+          HR Management Access?{' '}
+          <Link to="/login" className="text-indigo-400 hover:text-indigo-300 transition-colors font-medium">
+            Log in to Dashboard
+          </Link>
         </p>
       </div>
     </div>

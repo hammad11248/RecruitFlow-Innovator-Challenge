@@ -1,7 +1,7 @@
 # RecruitFlow 🚀
 **Autonomous AI-Powered HR Recruitment Pipeline with Dual-Portal Evaluation System**
 
-> End-to-end candidate ingestion, 6-dimension AI scoring, role-based dual portals (Candidate + HR), interactive leaderboard, and interview scheduling — powered by Google Gemini, Firebase Firestore, and FastAPI.
+> End-to-end candidate ingestion, 6-dimension AI scoring, role-based dual portals (Candidate + HR), interactive leaderboard, and interview scheduling — powered by Google Gemini, Firebase Firestore, FastAPI, and unified Vercel monorepo.
 
 ---
 
@@ -10,7 +10,7 @@
 ### Core Pipeline
 - 📄 **CV Ingestion**
   * **Functionality:** Drag-and-drop PDF upload with automated AI text parsing.
-  * **Technologies:** FastAPI (file streams & upload handles), Python `pdfplumber`/`PyPDF2`, Google Gemini API (`gemini-1.5-flash`), React (drag-and-drop UI).
+  * **Technologies:** FastAPI (file streams & upload handles), Python `python-docx`, Google Gemini API (`gemini-1.5-flash`), React (drag-and-drop UI).
 - 🧠 **6-Dimension AI Scoring**
   * **Functionality:** Evaluates Technical Skills, Experience, Assessment, CV Quality, Cultural Fit, and Engagement.
   * **Technologies:** Google Gemini API (dimension evaluation), Custom Python scoring algorithms (`scoring_engine.py`), Pydantic v2 (type validation).
@@ -44,23 +44,6 @@
   * **Functionality:** Sortable candidates list with inline dimension meters, rank medals, and search tags.
   * **Technologies:** React state hooks, CSS grid, Lucide React icons, Axios interceptors.
 
-### Visualization Components
-- 🎯 **Aggregate Gauge**
-  * **Functionality:** Semicircular animated meter showing overall score tier.
-  * **Technologies:** Custom SVG elements, CSS gradients, Tailwind transition classes.
-- 🔴 **Radial Score Charts**
-  * **Functionality:** Animated radial donut charts showing dimension breakdowns.
-  * **Technologies:** React custom components, SVG path `stroke-dasharray` transition formulas.
-- 📈 **Factor Breakdown Chart**
-  * **Functionality:** Horizontal progress bar meters illustrating comparative metric scores.
-  * **Technologies:** Tailwind CSS dynamic width utilities, CSS ease-in animations.
-- 🛤️ **Timeline Stepper**
-  * **Functionality:** Stepper showing application status history.
-  * **Technologies:** Tailwind CSS styling, CSS pulse animations, Lucide React icons.
-- 📊 **Score Radar**
-  * **Functionality:** Multi-axis polygon radar chart showing candidate dimensional strengths.
-  * **Technologies:** Custom SVG dynamic coordinates calculation in React.
-
 ---
 
 ## 🏗️ Architecture
@@ -83,7 +66,7 @@
             │                       │
             ▼                       ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                     FastAPI Backend (Python 3.12)                │
+│              Vercel Serverless Backend (Python 3.12)            │
 │                                                                 │
 │  /api/candidate-portal/:id ──── Sanitized View (no HR data)     │
 │  /api/hr/leaderboard ────────── Ranked list + dimensions        │
@@ -117,11 +100,11 @@
 | **Communications** | SMTP Mailer | Python `smtplib`, `email.mime` | Dispatches assessment links and interview updates via Gmail SMTP. |
 | **Calendar Sync** | Google Calendar API | `google-api-python-client`, `oauth2client` | Synchronizes, verifies, and schedules real interview slots. |
 | **Authentication** | Firebase Auth / JWT | `PyJWT` (Python), Firebase client SDK | HR auth portal credentials; secure link tokens for candidates. |
-| **Deployment** | Docker, Firebase, Railway | Docker Compose, `firebase.json` | Client hosting on Firebase; server-side container orchestration. |
+| **Deployment** | Vercel Monorepo | `vercel.json` | Unified static client building and Python serverless function execution. |
 
 ---
 
-## 🚀 Quick Start
+## 🔧 Local Setup
 
 ### Prerequisites
 
@@ -154,43 +137,21 @@ Download your Firebase service account key from:
 
 Save it as `serviceAccountKey.json` in the project root.
 
-### 3. Run with Docker (Recommended)
-
-```bash
-# Start backend api
-docker-compose up --build
-
-# In a new terminal, start the frontend dev server
-cd frontend
-npm install
-npm run dev
-```
-
-- **Frontend**: http://localhost:5173
-- **API Docs**: http://localhost:8000/api/docs
-
-### 4. Run Manually (Development)
+### 3. Run Manually (Development)
 
 ```bash
 # Terminal 1 — Backend
-pip install -r backend/requirements.txt
+pip install -r requirements.txt
 python -m uvicorn backend.main:app --host 127.0.0.1 --port 8001 --reload
 
 # Terminal 2 — Frontend
 cd frontend
 npm install
 npm run dev
-
-# Note: Background tasks are processed in-process using an internal asyncio worker queue.
-# There is no need to run a separate Celery/Redis worker process.
 ```
 
-### 5. Bulk Import Test Data
-
-```bash
-# Import 1000 synthetic candidates from the CSV dataset
-python -u backend/bulk_import.py
-```
+- **Frontend**: http://localhost:5173
+- **API Docs**: http://localhost:8001/api/docs
 
 ---
 
@@ -205,7 +166,7 @@ http://localhost:5173/candidate/{candidateId}
 ```
 
 **What candidates see:**
-- ✅ Overall aggregate score (animated semicircular gauge)
+- ✅ Overall aggregate score (animated SVG circular rings)
 - ✅ 6-dimension radial score charts (Technical Skills, Experience, Assessment, CV Quality, Cultural Fit, Engagement)
 - ✅ Application pipeline timeline with real-time status updates
 - ✅ Completion progress bar and completed module badges
@@ -228,43 +189,34 @@ http://localhost:5173/hr
 
 **What HR sees:**
 - 📊 6 analytics stat cards (Total, Passed, Scored, Interviews, Avg Score, Top Performer)
-- 🏆 Sortable leaderboard with rank badges and inline 6-dimension mini-bars
+- 🏆 Sortable leaderboard with rank badges and inline 6-dimension progress meters
 - 🔍 Full-text search by name/email + status filter chips
 - 📋 Tabbed drill-down drawer per candidate:
-  - **Overview** — Radar chart + score cards + skills
-  - **Dimensions** — Full 6-dimension breakdown with rationale, weights, and bar charts
-  - **Profile** — Skills, experience, education, CV download
-  - **Timeline** — Full state history with timestamps
+  - **Overview** — Score metrics + matching summaries + capabilities list
+  - **Dimensions** — Full 6-dimension breakdown with evaluation progress bars
+  - **Profile** — Skills, experience, target positions, CV download
+  - **Timeline** — Milestone stepper history with evaluation status
 
 ---
 
-## ☁️ Deployment
+## ☁️ Vercel Deployment
 
-### Backend Deployment
+RecruitFlow is configured as a unified Vercel monorepo. Both the frontend and backend deploy automatically under the same project domain.
 
-Deploy the backend by building the Docker image and running it on any platform (Render, Fly.io, self-hosted VPS) using environment variables from `.env.example`.
+### Deployment Instructions:
 
-For example, to build and run the Docker container locally or on a VPS:
-```bash
-# Build the Docker image
-docker build -t recruitflow-backend ./backend
-
-# Run the container (binding to host port 8080)
-docker run -d -p 8080:8080 --env-file .env recruitflow-backend
-```
-
-### Frontend → [Firebase Hosting](https://firebase.google.com/docs/hosting)
-
-1. Ensure `.firebaserc` is configured with your Firebase Project ID.
-2. Run the build command in the `frontend` directory:
-   ```bash
-   cd frontend
-   npm run build
-   ```
-3. Deploy the compiled assets (`frontend/dist`) using the Firebase CLI:
-   ```bash
-   npm run deploy
-   ```
+1. Commit and push the code changes to your GitHub repository.
+2. Go to the **[Vercel Dashboard](https://vercel.com/)** and click **Add New -> Project**.
+3. Select your repository.
+4. Keep the **Root Directory** empty (Vercel will parse the root `vercel.json` file).
+5. Under **Environment Variables**, add the environment keys required by your backend:
+   * `FIREBASE_SERVICE_ACCOUNT_JSON` (Paste the raw JSON string content of your private key `serviceAccountKey.json`).
+   * `FIREBASE_STORAGE_BUCKET` (e.g. `recruitflow-9f5a0.appspot.com`).
+   * `GEMINI_API_KEY`
+   * `JWT_SECRET_KEY`
+   * `EMAIL_USER` / `EMAIL_PASS` (Gmail SMTP credentials).
+   * `GOOGLE_CALENDAR_ID`
+6. Click **Deploy**. Vercel will build the frontend React assets and run the backend as Python serverless functions, mapping `/api/*` requests natively without CORS configuration.
 
 ---
 
@@ -275,7 +227,7 @@ docker run -d -p 8080:8080 --env-file .env recruitflow-backend
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | `GET` | `/api/health` | None | Health check |
-| `POST` | `/api/candidates/upload` | None | Upload PDF CV |
+| `POST` | `/api/candidates/upload` | None | Upload PDF/DOCX CV |
 | `POST` | `/api/candidates/bulk-import` | None | Bulk import JSON list |
 | `GET` | `/api/candidates` | Bearer token | List candidates |
 | `GET` | `/api/candidates/{id}` | Bearer token | Get candidate details |
@@ -309,8 +261,6 @@ docker run -d -p 8080:8080 --env-file .env recruitflow-backend
 | D5 | **Cultural & Role Fit** | 10% | Role persona matching, communication style, growth mindset indicators |
 | D6 | **Response Time & Engagement** | 5% | Time from assessment sent → submitted (<24h = 100, >72h = 25) |
 
-All 6 dimensions are displayed on both the Candidate Portal (as radial charts) and the HR Command Center (as radar charts, bar charts, and detail tables with rationale).
-
 ---
 
 ## 📁 Project Structure
@@ -322,16 +272,18 @@ All 6 dimensions are displayed on both the Candidate Portal (as radial charts) a
 │   ├── firebase_admin_init.py     # Firebase Admin SDK + Mock fallback
 │   ├── firebase_admin_init_mock.py # Local mock Firestore/Storage
 │   ├── bulk_import.py             # CSV dataset bulk importer
+│   ├── api/
+│   │   └── index.py               # Vercel serverless python handler
 │   ├── agents/
 │   │   ├── cv_parser_agent.py     # Gemini AI CV parser (D1, D2, D4)
 │   │   ├── scoring_engine.py      # 6-dimension scoring calculations
 │   │   └── evaluator.py           # Assessment evaluation pipeline (D3, D5, D6)
 │   ├── routes/
-│   │   ├── candidates.py          # /api/candidates list & detail
+│   │   ├── candidates.py          # /api/candidates list, detail, & bulk import
 │   │   ├── assessments.py         # /api/assessments endpoints
 │   │   ├── schedule.py            # /api/schedule endpoints
 │   │   ├── auth.py                # Firebase token verification
-│   │   └── evaluation.py          # ★ Dual-portal endpoints (candidate + HR)
+│   │   └── evaluation.py          # Dual-portal endpoints (candidate + HR)
 │   ├── models/
 │   │   ├── candidate.py           # Pydantic models + 6-dimension types
 │   │   ├── assessment.py          # Assessment submission models
@@ -341,13 +293,11 @@ All 6 dimensions are displayed on both the Candidate Portal (as radial charts) a
 │   │   ├── storage_service.py     # Firebase Storage helpers
 │   │   ├── email_service.py       # Gmail SMTP email sender
 │   │   ├── calendar_service.py    # Google Calendar API
-│   │   └── task_queue_service.py  # Local in-process asyncio background worker
-│   ├── tasks/pipeline_tasks.py    # Background task executor logic
-│   ├── requirements.txt
-│   └── Dockerfile
+│   │   └── task_queue_service.py  # Local/Vercel task queue service
+│   └── tasks/pipeline_tasks.py    # Background task executor logic
 ├── frontend/
 │   ├── src/
-│   │   ├── App.jsx                # React Router (7 routes)
+│   │   ├── App.jsx                # React Router (6 routes)
 │   │   ├── main.jsx               # Entry point + AuthProvider
 │   │   ├── firebase.js            # Firebase SDK + mock mode
 │   │   ├── index.css              # Design system + animations
@@ -360,56 +310,32 @@ All 6 dimensions are displayed on both the Candidate Portal (as radial charts) a
 │   │   │   ├── useCandidates.js   # Real-time candidates hook
 │   │   │   └── useAssessment.js   # Assessment data hook
 │   │   ├── components/
-│   │   │   ├── RadialScore.jsx    # ★ Animated SVG radial/donut chart
-│   │   │   ├── AggregateGauge.jsx # ★ Semicircular gauge with gradient
-│   │   │   ├── TimelineStepper.jsx# ★ Animated pipeline timeline
-│   │   │   ├── LeaderboardTable.jsx# ★ Sortable leaderboard with ranks
-│   │   │   ├── DrillDownDrawer.jsx# ★ Tabbed HR drill-down panel
-│   │   │   ├── FactorBreakdownChart.jsx # ★ Horizontal bar chart
+│   │   │   ├── RadialScore.jsx    # Animated SVG radial/donut chart
+│   │   │   ├── AggregateGauge.jsx # Semicircular gauge with gradient
+│   │   │   ├── TimelineStepper.jsx# Animated pipeline timeline
+│   │   │   ├── LeaderboardTable.jsx# Sortable leaderboard with ranks
+│   │   │   ├── DrillDownDrawer.jsx# Tabbed HR drill-down panel
+│   │   │   ├── FactorBreakdownChart.jsx # Horizontal bar chart
 │   │   │   ├── ScoreRadar.jsx     # 6-axis radar chart
 │   │   │   ├── ScoreBar.jsx       # Linear score bar
 │   │   │   ├── StatusPill.jsx     # Color-coded status badge
-│   │   │   ├── CandidateTable.jsx # Legacy candidate table
-│   │   │   ├── CandidateDrawer.jsx# Legacy candidate drawer
 │   │   │   ├── FileUpload.jsx     # CV drag-and-drop upload
 │   │   │   ├── CalendarGrid.jsx   # Calendar component
 │   │   │   └── ProtectedRoute.jsx # Auth guard
 │   │   └── pages/
-│   │       ├── CandidatePortal.jsx# ★ Public candidate dashboard
-│   │       ├── HrDashboard.jsx    # ★ HR command center + leaderboard
+│   │       ├── CandidatePortal.jsx# Public candidate dashboard
+│   │       ├── HrDashboard.jsx    # HR command center + leaderboard
 │   │       ├── Apply.jsx          # Public application form
 │   │       ├── Login.jsx          # Firebase Auth login
 │   │       ├── Assessment.jsx     # Token-gated assessment
-│   │       ├── Dashboard.jsx      # Legacy pipeline dashboard
 │   │       └── Schedule.jsx       # Interview calendar
 │   ├── tailwind.config.js         # Custom color palette + animations
 │   ├── postcss.config.js
 │   ├── vite.config.js
-│   ├── vercel.json                # Vercel deployment config
 │   └── package.json
+├── vercel.json                    # Vercel monorepo deployment config
+├── requirements.txt               # Vercel python dependency list
 ├── .github/workflows/ci.yml       # GitHub Actions CI/CD
-├── docker-compose.yml             # Full stack Docker setup
-├── railway.toml                   # Railway deployment config
 ├── firestore.rules                # Firebase security rules
 ├── .env.example                   # Environment variable template
 └── README.md
-```
-
-> ★ = New files added for the dual-portal evaluation system
-
----
-
-## 🔒 Security Notes
-
-- **Never commit `.env` or `serviceAccountKey.json`** — both are in `.gitignore`
-- The `JWT_SECRET_KEY` must be a random 32+ character string in production
-- Gmail App Passwords are single-app passwords — not your real account password
-- Firebase Firestore security rules are in `firestore.rules` — deploy them via Firebase CLI
-- **Candidate Portal** endpoints never expose HR rationale, scoring thresholds, or other candidates' data
-- **HR Portal** endpoints require valid Firebase Auth Bearer tokens via the `require_hr_user` dependency
-
----
-
-## 📄 License
-
-MIT — see [LICENSE](LICENSE) for details.

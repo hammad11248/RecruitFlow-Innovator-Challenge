@@ -74,31 +74,16 @@ async def upload_candidate(
     await firestore_service.create_candidate(candidate_id, candidate_data)
 
     try:
-        pipeline = build_pipeline_chain(candidate_id)
-        pipeline.apply_async()
+        from backend.services import task_queue_service
+        await task_queue_service.enqueue("process-cv", {"candidate_id": candidate_id})
     except Exception as e:
         import logging
-        import threading
-        from backend.tasks.pipeline_tasks import parse_cv_task, screening_decision_task, send_assessment_email_task, notify_hr_task
-        
-        logging.getLogger(__name__).warning(f"Could not dispatch to Celery (Redis down?): {e}. Running pipeline in local thread fallback.")
-        
-        def run_fallback():
-            try:
-                # Execute in sequence like Celery chain
-                parse_cv_task(candidate_id)
-                screening_decision_task(candidate_id)
-                send_assessment_email_task(candidate_id)
-                notify_hr_task(candidate_id)
-            except Exception as fe:
-                logging.getLogger(__name__).error(f"Fallback pipeline failed for {candidate_id}: {fe}")
-                
-        threading.Thread(target=run_fallback, daemon=True).start()
+        logging.getLogger(__name__).error(f"Could not enqueue process-cv task: {e}")
 
     return {
         "candidateId": candidate_id,
         "status": "PROCESSING",
-        "message": "CV uploaded successfully. Processing pipeline started (using fallback thread if Celery is down).",
+        "message": "CV uploaded successfully. Processing pipeline started.",
     }
 
 
@@ -213,3 +198,129 @@ async def get_mock_cv(storage_path: str):
         raise HTTPException(status_code=404, detail="CV file not found")
         
     return Response(content=file_bytes, media_type="application/pdf")
+
+
+# ---------------------------------------------------------------------------
+# POST /api/candidates/bulk-import
+# ---------------------------------------------------------------------------
+
+from pydantic import BaseModel
+
+class BulkCandidateImport(BaseModel):
+    id: str
+    job_id: str
+    email: str
+    full_name: str
+    cv_text: Optional[str] = None
+    scores: Optional[dict] = None
+    funnel_status: str = "SCREENING_PENDING"
+
+@router.post("/candidates/bulk-import", status_code=201)
+async def bulk_import_candidates(candidates: list[BulkCandidateImport]):
+    """
+    Bulk import candidates from JSON payload.
+    Bypasses Gemini CV parser to allow fast, rate-limit-free uploads.
+    """
+    from backend.firebase_admin_init import db
+    
+    mapped_candidates = {}
+    for cand in candidates:
+        scores = cand.scores or {}
+        d1 = float(scores.get("technical_skills", 0.0))
+        d2 = float(scores.get("experience", 0.0))
+        d4 = float(scores.get("communication", 0.0))
+        d5 = float(scores.get("cultural_fit", 0.0))
+        
+        w1 = 0.30
+        w2 = 0.20
+        w4 = 0.10
+        w5 = 0.10
+        total_w = w1 + w2 + w4 + w5
+        partial_composite = 0.0
+        if total_w > 0:
+            partial_composite = (d1 * w1 + d2 * w2 + d4 * w4 + d5 * w5) / total_w
+            
+        candidate_data = {
+            "name": cand.full_name,
+            "email": cand.email,
+            "phone": "",
+            "jobId": cand.job_id,
+            "status": cand.funnel_status,
+            "cvText": cand.cv_text or "",
+            "screeningScore": round(partial_composite, 2),
+            "compositeScore": round(partial_composite, 2),
+            "scoreDimensions": {
+                "technicalSkills": {
+                    "dimension": "D1",
+                    "label": "Technical Skills Match",
+                    "weight": w1,
+                    "rawScore": d1,
+                    "weightedScore": round(d1 * w1, 2),
+                    "rationale": "Imported via bulk import",
+                },
+                "experienceSeniority": {
+                    "dimension": "D2",
+                    "label": "Experience & Seniority",
+                    "weight": w2,
+                    "rawScore": d2,
+                    "weightedScore": round(d2 * w2, 2),
+                    "rationale": "Imported via bulk import",
+                },
+                "cvQuality": {
+                    "dimension": "D4",
+                    "label": "CV Quality & Communication",
+                    "weight": w4,
+                    "rawScore": d4,
+                    "weightedScore": round(d4 * w4, 2),
+                    "rationale": "Imported via bulk import",
+                },
+                "culturalFit": {
+                    "dimension": "D5",
+                    "label": "Cultural & Role Fit",
+                    "weight": w5,
+                    "rawScore": d5,
+                    "weightedScore": round(d5 * w5, 2),
+                    "rationale": "Imported via bulk import",
+                }
+            },
+            "createdAt": datetime.utcnow(),
+            "stateHistory": [
+                {"state": "UPLOADED", "timestamp": datetime.utcnow(), "meta": {}},
+                {"state": cand.funnel_status, "timestamp": datetime.utcnow(), "meta": {}},
+            ],
+            "assessmentToken": "",
+            "assessmentScore": 0.0,
+            "assessmentSentAt": None,
+            "assessmentSubmittedAt": None,
+            "interviewScheduledAt": None,
+        }
+        mapped_candidates[cand.id] = candidate_data
+        
+    is_mock = hasattr(db, "store")
+    imported_count = len(candidates)
+    
+    if is_mock:
+        store = db.store
+        old_save = store._save
+        store._save = lambda *args, **kwargs: None
+        try:
+            for cand_id, data in mapped_candidates.items():
+                db.collection("candidates").document(cand_id).set(data)
+        finally:
+            store._save = old_save
+            store._save()
+    else:
+        chunk_size = 500
+        cand_items = list(mapped_candidates.items())
+        for i in range(0, len(cand_items), chunk_size):
+            batch = db.batch()
+            chunk = cand_items[i : i + chunk_size]
+            for cand_id, data in chunk:
+                doc_ref = db.collection("candidates").document(cand_id)
+                batch.set(doc_ref, data)
+            batch.commit()
+            
+    return {
+        "message": f"Successfully imported {imported_count} candidates.",
+        "count": imported_count
+    }

@@ -1,5 +1,5 @@
 """
-Email service — SendGrid integration for sending assessment invitations,
+Email service — Gmail SMTP for sending assessment invitations,
 interview confirmations, rejection notices, and HR notifications.
 """
 

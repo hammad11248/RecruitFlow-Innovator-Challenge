@@ -38,7 +38,7 @@ if (!isMockMode) {
 // ---------------------------------------------------------------------------
 
 const BACKEND_URL = import.meta.env.VITE_API_URL || 
-  (window.location.port === '5173' ? 'http://localhost:8000/api' : '/api');
+  (window.location.port === '5173' ? 'http://127.0.0.1:8001/api' : '/api');
 
 // Simple pub-sub for mock auth state
 const authListeners = new Set();

@@ -142,7 +142,7 @@ class MockFirebaseStore:
                     "id": "job-backend",
                     "title": "Backend Architect",
                     "department": "Engineering",
-                    "requiredSkills": ["Python", "FastAPI", "Celery", "Redis"],
+                    "requiredSkills": ["Python", "FastAPI", "Firestore", "Gemini"],
                     "requiredYears": 8,
                     "preferredDomains": ["Cloud", "SaaS"],
                     "criticalSkills": ["Python", "FastAPI"],

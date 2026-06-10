@@ -17,10 +17,21 @@ from fastapi.middleware.cors import CORSMiddleware
 import backend.firebase_admin_init  # noqa: F401
 
 
-from backend.app.routes.candidates import router as candidates_ingestion_router
 from backend.routes.candidates import router as candidates_router
 from backend.routes.assessments import router as assessments_router
 from backend.routes.schedule import router as schedule_router
+from backend.routes.evaluation import router as evaluation_router
+
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Start task queue worker
+    from backend.services.task_queue_service import start_worker, stop_worker
+    start_worker()
+    yield
+    # Shutdown: Stop task queue worker
+    await stop_worker()
 
 app = FastAPI(
     title="RecruitFlow — HR Recruitment Funnel API",
@@ -28,27 +39,19 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
+    lifespan=lifespan,
 )
 
 from backend.config import settings
 
-# CORS configuration — allow frontend at localhost:5173 and configured URL
-origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:5174",
-    "http://127.0.0.1:5174",
-]
-if settings.frontend_url:
-    normalized_origin = settings.frontend_url.rstrip("/")
-    if normalized_origin not in origins:
-        origins.append(normalized_origin)
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=[
+        "https://recruitflow-9f5a0.web.app",
+        "https://recruitflow-9f5a0.firebaseapp.com",
+        "http://localhost:5173",
+        "http://localhost:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -60,10 +63,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 
 # Include route modules
-app.include_router(candidates_ingestion_router, prefix="/api")
 app.include_router(candidates_router, prefix="/api")
 app.include_router(assessments_router, prefix="/api")
 app.include_router(schedule_router, prefix="/api")
+app.include_router(evaluation_router, prefix="/api")
 
 
 @app.get("/api/health")
