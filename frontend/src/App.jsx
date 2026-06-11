@@ -79,12 +79,26 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Apply />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/candidate/:candidateId" element={<CandidatePortal />} />
-        <Route path="/assessment/:token" element={<Assessment />} />
+        <Route
+          path="/candidate/:candidateId"
+          element={
+            <ProtectedRoute allowedRoles={['candidate', 'recruiter', 'interviewer', 'hr_manager']}>
+              <CandidatePortal />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/assessment/:token"
+          element={
+            <ProtectedRoute allowedRoles={['candidate', 'recruiter', 'interviewer', 'hr_manager']}>
+              <Assessment />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/hr"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['recruiter', 'interviewer', 'hr_manager']}>
               <HrDashboard />
             </ProtectedRoute>
           }
@@ -98,7 +112,7 @@ export default function App() {
         <Route
           path="/schedule"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['recruiter', 'interviewer', 'hr_manager']}>
               <Schedule />
             </ProtectedRoute>
           }

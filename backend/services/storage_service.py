@@ -66,8 +66,8 @@ def _upload_cv_sync(
         except Exception as e:
             logging.getLogger(__name__).warning(f"Firebase Storage upload failed: {e}. Falling back to Firestore storage.")
 
-    # Return database fallback URLs
-    storage_path = f"db://candidates/{candidate_id}"
+    # Return database fallback URLs including the filename to preserve the file extension
+    storage_path = f"db://candidates/{candidate_id}/{filename}"
     download_url = f"/api/candidates/{candidate_id}/cv"
     return storage_path, download_url
 
@@ -90,7 +90,8 @@ async def upload_cv(
 def _get_download_url_sync(storage_path: str) -> str:
     """Generate a signed download URL or return database route if using fallback."""
     if storage_path.startswith("db://"):
-        candidate_id = storage_path.split("/")[-1]
+        parts = storage_path.split("/")
+        candidate_id = parts[3] if len(parts) >= 4 else parts[-1]
         return f"/api/candidates/{candidate_id}/cv"
         
     import datetime as dt
@@ -113,7 +114,8 @@ async def get_download_url(storage_path: str) -> str:
 def _download_cv_sync(storage_path: str) -> bytes:
     """Download a file from Firebase Storage or database fallback as bytes."""
     if storage_path.startswith("db://"):
-        candidate_id = storage_path.split("/")[-1]
+        parts = storage_path.split("/")
+        candidate_id = parts[3] if len(parts) >= 4 else parts[-1]
         doc_ref = db.collection("candidates").document(candidate_id)
         doc = doc_ref.get()
         if doc.exists:

@@ -352,3 +352,15 @@ async def get_candidate_by_email(email: str) -> Optional[dict[str, Any]]:
         if c.get("email") and c.get("email").strip().lower() == email.strip().lower():
             return c
     return None
+
+
+async def get_hr_user_by_email(email: str) -> Optional[dict[str, Any]]:
+    """Fetch HR user profile by email."""
+    query = db.collection(HR_USERS_COL)
+    docs = await _run_sync(query.get)
+    for doc in docs:
+        u = _serialize_doc(doc)
+        if u.get("email") and u.get("email").strip().lower() == email.strip().lower():
+            return u
+    return None
+

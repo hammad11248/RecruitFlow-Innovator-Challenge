@@ -156,19 +156,25 @@ def _build_hr_drilldown_view(candidate: dict) -> dict:
 # ===========================================================================
 
 @router.get("/candidate-portal/{candidate_id}")
-async def get_candidate_portal(candidate_id: str):
+async def get_candidate_portal(candidate_id: str, user: dict = Depends(verify_firebase_token)):
     """
     Candidate Portal endpoint — returns sanitized candidate dashboard data.
-
-    Access is public (no auth required) — the candidateId itself serves as
-    the access token, consistent with how assessment tokens already work.
-
-    Sensitive HR data (rationale, raw CV text, admin comments, other
-    candidates' data) is stripped from the response.
+    Only allows access if the authenticated user is HR or the candidate themselves.
     """
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication credentials missing.")
+
     candidate = await firestore_service.get_candidate(candidate_id)
     if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not found")
+
+    role = user.get("role")
+    email = user.get("email")
+    is_hr = role in ("recruiter", "interviewer", "hr_manager")
+    is_self = email and candidate.get("email") and email.strip().lower() == candidate.get("email").strip().lower()
+
+    if not (is_hr or is_self):
+        raise HTTPException(status_code=403, detail="Access denied. You can only view your own candidate portal.")
 
     return _build_candidate_portal_view(candidate)
 

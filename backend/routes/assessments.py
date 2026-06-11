@@ -6,7 +6,8 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from backend.routes.auth import verify_firebase_token
 
 from backend.models.assessment import AssessmentSubmission
 from backend.services import firestore_service
@@ -19,18 +20,35 @@ router = APIRouter(tags=["Assessments"])
 # ---------------------------------------------------------------------------
 
 @router.post("/assessments/submit")
-async def submit_assessment(submission: AssessmentSubmission):
+async def submit_assessment(submission: AssessmentSubmission, user: dict = Depends(verify_firebase_token)):
     """
     Submit assessment answers.
     1. Validates the token exists
-    2. Writes answers to Firestore assessment document
-    3. Updates candidate status to ASSESSMENT_SUBMITTED
-    4. Dispatches evaluation Celery task
+    2. Validates user is authorized
+    3. Writes answers to Firestore assessment document
+    4. Updates candidate status to ASSESSMENT_SUBMITTED
+    5. Dispatches evaluation Celery task
     """
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication credentials missing.")
+
     token = submission.token
     assessment = await firestore_service.get_assessment(token)
     if not assessment:
         raise HTTPException(status_code=404, detail="Assessment not found")
+
+    candidate_id = assessment.get("candidateId", "")
+    candidate = await firestore_service.get_candidate(candidate_id) if candidate_id else None
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Associated candidate not found")
+
+    role = user.get("role")
+    email = user.get("email")
+    is_hr = role in ("recruiter", "interviewer", "hr_manager")
+    is_self = email and candidate.get("email") and email.strip().lower() == candidate.get("email").strip().lower()
+
+    if not (is_hr or is_self):
+        raise HTTPException(status_code=403, detail="Access denied. You can only submit your own assessment.")
 
     if assessment.get("answers") and len(assessment["answers"]) > 0:
         raise HTTPException(status_code=400, detail="Assessment already submitted")
@@ -83,11 +101,27 @@ async def submit_assessment(submission: AssessmentSubmission):
 # ---------------------------------------------------------------------------
 
 @router.get("/assessments/{token}")
-async def get_assessment(token: str):
+async def get_assessment(token: str, user: dict = Depends(verify_firebase_token)):
     """Fetch assessment document by token (for candidate portal)."""
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication credentials missing.")
+
     assessment = await firestore_service.get_assessment(token)
     if not assessment:
         raise HTTPException(status_code=404, detail="Assessment not found")
+
+    candidate_id = assessment.get("candidateId", "")
+    candidate = await firestore_service.get_candidate(candidate_id) if candidate_id else None
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Associated candidate not found")
+
+    role = user.get("role")
+    email = user.get("email")
+    is_hr = role in ("recruiter", "interviewer", "hr_manager")
+    is_self = email and candidate.get("email") and email.strip().lower() == candidate.get("email").strip().lower()
+
+    if not (is_hr or is_self):
+        raise HTTPException(status_code=403, detail="Access denied. You can only view your own assessment.")
 
     response = {
         "token": assessment.get("token", token),

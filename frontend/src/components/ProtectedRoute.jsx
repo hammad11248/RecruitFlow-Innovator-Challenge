@@ -1,7 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 
-export default function ProtectedRoute({ children }) {
+export default function ProtectedRoute({ children, allowedRoles = ['recruiter', 'interviewer', 'hr_manager'] }) {
   const { user, loading } = useAuth()
   const location = useLocation()
 
@@ -20,7 +20,9 @@ export default function ProtectedRoute({ children }) {
   }
 
   const role = localStorage.getItem('user_role')
-  if (!user || role !== 'hr') {
+  const hasAccess = user && allowedRoles.includes(role)
+
+  if (!hasAccess) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 

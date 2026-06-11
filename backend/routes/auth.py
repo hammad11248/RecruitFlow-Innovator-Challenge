@@ -17,28 +17,60 @@ async def verify_firebase_token(
     """
     FastAPI dependency to verify the Firebase Authorization Bearer token.
     Returns None if no token is provided.
-    Decodes and validates token if provided.
+    Decodes and validates token if provided, extracting the role parameter.
     """
     if not credentials:
         return None
 
     token = credentials.credentials
-    # In mock mode, accept any bearer token so frontend can use mock or real Firebase
-    if MOCK_MODE:
+    
+    # Check for Mock Mode or mock-prefixed tokens
+    if MOCK_MODE or token == "mock-token" or token.startswith("mock-"):
+        mock_email = "hr@company.com"
+        if token.startswith("mock-token:"):
+            mock_email = token.split(":", 1)[1]
+
+        # 1. Check if HR user exists
+        hr_user = await firestore_service.get_hr_user_by_email(mock_email)
+        if hr_user:
+            return {
+                "uid": hr_user.get("uid"),
+                "email": mock_email,
+                "role": hr_user.get("role")
+            }
+
+        # 2. Check if Candidate exists
+        candidate = await firestore_service.get_candidate_by_email(mock_email)
+        if candidate:
+            return {
+                "uid": candidate.get("id"),
+                "email": mock_email,
+                "role": "candidate"
+            }
+
+        # Fallback default
         return {
             "uid": "mock-hr-uid",
-            "email": "hr@company.com",
-            "role": "recruiter"
-        }
-    if token == "mock-token" or token.startswith("mock-"):
-        return {
-            "uid": "mock-hr-uid",
-            "email": "hr@company.com",
+            "email": mock_email,
             "role": "recruiter"
         }
 
     try:
         decoded_token = auth.verify_id_token(token)
+        
+        # Ensure role claim exists in decoded token, fallback to Firestore if needed
+        if decoded_token and not decoded_token.get("role"):
+            uid = decoded_token.get("uid")
+            email = decoded_token.get("email")
+            if uid:
+                user_doc = await firestore_service.get_hr_user(uid)
+                if user_doc:
+                    decoded_token["role"] = user_doc.get("role")
+                elif email:
+                    candidate = await firestore_service.get_candidate_by_email(email)
+                    if candidate:
+                        decoded_token["role"] = "candidate"
+                        
         return decoded_token
     except Exception as e:
         raise HTTPException(
@@ -51,13 +83,20 @@ async def require_hr_user(
     user: Optional[dict] = Depends(verify_firebase_token)
 ) -> dict:
     """
-    Dependency that requires the user to be authenticated as an HR user.
+    Dependency that requires the user to be authenticated as an HR user (recruiter, interviewer, hr_manager).
     """
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication credentials missing.",
             headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    role = user.get("role")
+    if role not in ("recruiter", "interviewer", "hr_manager"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Access denied. Role '{role}' does not have HR administrative privileges.",
         )
     return user
 
@@ -78,6 +117,8 @@ async def signup_hr_user(user_data: dict):
         try:
             user_record = auth.create_user(email=email, password=password)
             uid = user_record.uid
+            # Set custom role claim in Firebase ID token
+            auth.set_custom_user_claims(uid, {"role": role})
         except Exception as e:
             # Fall back to mock mode if Firebase auth isn't configured
             print(f"Firebase auth failed ({e}), falling back to mock mode")
@@ -97,4 +138,15 @@ async def signup_hr_user(user_data: dict):
         "email": email,
         "role": role,
         "message": "User registered successfully"
+    }
+
+
+@router.get("/auth/me")
+async def get_me(user: dict = Depends(verify_firebase_token)):
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return {
+        "uid": user.get("uid"),
+        "email": user.get("email"),
+        "role": user.get("role")
     }

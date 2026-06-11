@@ -18,10 +18,10 @@ client.interceptors.request.use(async (config) => {
       token = null
     }
   }
-  if (!token) {
+  if (token === 'mock-token' || !token) {
     const mockUserEmail = localStorage.getItem('mock_user')
     if (mockUserEmail) {
-      token = 'mock-token'
+      token = `mock-token:${mockUserEmail}`
     }
   }
   if (token) {

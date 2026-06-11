@@ -30,8 +30,25 @@ export default function Login() {
       }
       // Authenticate/log in
       await login(email, password)
-      localStorage.setItem('user_role', 'hr')
-      navigate(from, { replace: true })
+      
+      // Query backend for verified claims/role
+      const meResponse = await client.get('/auth/me')
+      const userRole = meResponse.data.role
+      localStorage.setItem('user_role', userRole)
+      
+      if (userRole === 'candidate') {
+        try {
+          const lookupResponse = await client.get(`/candidate/lookup?email=${encodeURIComponent(email)}`)
+          const candidateId = lookupResponse.data.candidateId
+          navigate(`/candidate/${candidateId}`, { replace: true })
+        } catch (lookupErr) {
+          console.warn("No candidate profile found for this email, redirecting to apply form:", lookupErr)
+          // Redirect to the candidate application form
+          navigate('/', { replace: true })
+        }
+      } else {
+        navigate(from, { replace: true })
+      }
     } catch (err) {
       console.error("Authentication error details:", err)
       const errorMessages = {
@@ -170,7 +187,7 @@ export default function Login() {
             {mode === 'register' && (
               <div className="space-y-2">
                 <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider" htmlFor="role">
-                  HR Role
+                  Account Role
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
@@ -185,6 +202,7 @@ export default function Login() {
                     <option value="recruiter" className="bg-zinc-900">Recruiter</option>
                     <option value="interviewer" className="bg-zinc-900">Interviewer</option>
                     <option value="hr_manager" className="bg-zinc-900">HR Manager</option>
+                    <option value="candidate" className="bg-zinc-900">Candidate</option>
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-zinc-400">
                     <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
