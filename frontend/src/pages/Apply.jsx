@@ -194,7 +194,7 @@ export default function Apply() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-400 font-sans relative overflow-hidden px-4 py-8 md:py-16">
+    <div className="min-h-screen bg-zinc-950 text-zinc-300 font-sans relative overflow-hidden px-4 py-8 md:py-16">
       {/* Background glowing effects */}
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-violet-500/5 rounded-full blur-[120px] pointer-events-none" />
@@ -211,8 +211,8 @@ export default function Apply() {
             <Sparkles className="w-3.5 h-3.5" />
             <span>Autonomous Ingestion Pipeline</span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-extrabold text-zinc-400 tracking-tight">
-            Apply to <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-cyan-400 bg-clip-text text-transparent">RecruitFlow</span>
+          <h1 className="text-4xl md:text-5xl font-extrabold text-zinc-50 tracking-tight">
+            Apply to <span className="text-gradient">RecruitFlow</span>
           </h1>
           <p className="text-zinc-400 mt-3 text-base md:text-lg max-w-lg mx-auto">
             Submit your credentials and monitor the real-time evaluation process.

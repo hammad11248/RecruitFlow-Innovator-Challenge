@@ -46,15 +46,22 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+_cors_origins = {
+    "https://recruitflow-9f5a0.web.app",
+    "https://recruitflow-9f5a0.firebaseapp.com",
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174",
+    "http://127.0.0.1:3000",
+}
+if settings.frontend_url:
+    _cors_origins.add(settings.frontend_url.rstrip("/"))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://recruitflow-9f5a0.web.app",
-        "https://recruitflow-9f5a0.firebaseapp.com",
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:3000",
-    ],
+    allow_origins=sorted(_cors_origins),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

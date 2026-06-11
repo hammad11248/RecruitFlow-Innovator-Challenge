@@ -3,7 +3,9 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '../', '')
-  const apiTarget = env.VITE_API_URL || 'http://127.0.0.1:8001'
+  // Strip trailing /api so proxy /api/* → backend /api/* (not /api/api/*)
+  const rawTarget = env.VITE_API_URL || 'http://127.0.0.1:8001'
+  const apiTarget = rawTarget.replace(/\/api\/?$/, '')
 
   return {
     plugins: [react()],

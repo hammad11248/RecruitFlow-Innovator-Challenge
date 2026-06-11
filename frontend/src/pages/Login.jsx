@@ -49,7 +49,7 @@ export default function Login() {
   }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden moving-gradient text-zinc-400 font-sans">
+    <div className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden moving-gradient text-zinc-300 font-sans">
       
       {/* Moving gradient background stylesheet */}
       <style>{`
@@ -81,7 +81,7 @@ export default function Login() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
             </svg>
           </div>
-          <h1 className="text-3xl font-extrabold text-zinc-400 tracking-tight">RecruitFlow HR</h1>
+          <h1 className="text-3xl font-extrabold text-zinc-50 tracking-tight">RecruitFlow HR</h1>
           <p className="text-zinc-400 mt-2 text-sm">Sign in or register to coordinate candidate evaluation pipelines</p>
         </div>
 

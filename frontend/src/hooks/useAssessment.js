@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { db, doc, onSnapshot } from '../firebase'
 import client from '../api/client'
 
 

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,6 +6,7 @@
 
 :root {
   --color-primary: #6366f1;
+  --color-primary-glow: rgba(99, 102, 241, 0.35);
   --color-surface-dark: #09090b;
   --color-surface-card: #18181b;
   --color-surface-elevated: #27272a;
@@ -13,17 +14,29 @@
   --color-text-secondary: #a1a1aa;
   --color-text-muted: #71717a;
   --color-border: #27272a;
-  
+  --color-border-subtle: #3f3f46;
+
   --color-success: #10b981;
   --color-warning: #f59e0b;
   --color-danger: #ef4444;
   --color-info: #3b82f6;
 }
 
-body {
-  font-family: 'Inter', sans-serif;
-  background-color: var(--color-surface-dark);
-  color: var(--color-text-primary);
+@layer base {
+  html {
+    @apply antialiased;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background-color: var(--color-surface-dark);
+    color: var(--color-text-primary);
+  }
+
+  ::selection {
+    background-color: rgba(99, 102, 241, 0.35);
+    color: #fff;
+  }
 }
 
 * {
@@ -33,6 +46,7 @@ body {
 
 *::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 *::-webkit-scrollbar-track {
   background: transparent;
@@ -46,61 +60,60 @@ body {
 }
 
 @layer components {
-  /* Redefining 'glass' classes to clean, solid minimalist dark mode */
   .glass-card {
-    @apply bg-[#18181b] border border-[#27272a] rounded-xl shadow-sm;
+    @apply bg-zinc-900/80 border border-zinc-800/80 rounded-xl shadow-sm backdrop-blur-sm;
   }
 
   .glass-card-hover {
-    @apply glass-card transition-colors duration-200 hover:border-[#6366f1]/50;
+    @apply glass-card transition-all duration-200 hover:border-indigo-500/40 hover:shadow-[0_0_20px_rgba(99,102,241,0.08)];
   }
 
   .glass-input {
-    @apply bg-[#09090b] border border-[#27272a] rounded-lg px-4 py-2.5 text-white placeholder-[#71717a] focus:outline-none focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1] transition-colors duration-200;
+    @apply bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2.5 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 transition-colors duration-200;
   }
 
   .glass-button {
-    @apply bg-[#6366f1] text-white font-medium px-5 py-2.5 rounded-lg hover:bg-[#4f46e5] active:scale-[0.98] transition-all duration-200;
+    @apply bg-indigo-600 text-white font-medium px-5 py-2.5 rounded-lg hover:bg-indigo-500 active:scale-[0.98] transition-all duration-200 shadow-[0_0_20px_rgba(99,102,241,0.15)] hover:shadow-[0_0_24px_rgba(99,102,241,0.25)];
   }
 
   .glass-button-secondary {
-    @apply bg-[#27272a] text-white font-medium px-5 py-2.5 rounded-lg border border-[#3f3f46] hover:bg-[#3f3f46] active:scale-[0.98] transition-all duration-200;
+    @apply bg-zinc-800 text-zinc-100 font-medium px-5 py-2.5 rounded-lg border border-zinc-700 hover:bg-zinc-700 hover:border-zinc-600 active:scale-[0.98] transition-all duration-200;
   }
 
   .glass-button-danger {
-    @apply bg-[#ef4444] text-white font-medium px-5 py-2.5 rounded-lg hover:bg-[#dc2626] active:scale-[0.98] transition-all duration-200;
+    @apply bg-red-600 text-white font-medium px-5 py-2.5 rounded-lg hover:bg-red-500 active:scale-[0.98] transition-all duration-200;
   }
 
   .glass-sidebar {
-    @apply bg-[#18181b] border-r border-[#27272a];
+    @apply bg-zinc-950/95 border-r border-zinc-800 backdrop-blur-md;
   }
 
   .page-container {
-    @apply min-h-screen bg-[#09090b];
+    @apply min-h-screen bg-zinc-950 text-zinc-100;
   }
 
   .section-title {
-    @apply text-xl font-semibold text-white tracking-tight;
+    @apply text-xl font-semibold text-zinc-50 tracking-tight;
   }
 
   .section-subtitle {
-    @apply text-[#a1a1aa] text-sm;
+    @apply text-zinc-400 text-sm;
   }
 
   .table-header {
-    @apply text-xs font-medium text-[#71717a] uppercase tracking-wider bg-[#18181b] border-b border-[#27272a];
+    @apply text-xs font-medium text-zinc-500 uppercase tracking-wider bg-zinc-900/80 border-b border-zinc-800;
   }
 
   .table-row {
-    @apply border-b border-[#27272a] hover:bg-[#27272a]/30 transition-colors duration-150;
+    @apply border-b border-zinc-800/60 hover:bg-zinc-800/30 transition-colors duration-150;
   }
 
   .badge {
-    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium;
   }
 
   .score-bar-container {
-    @apply w-full h-1.5 bg-[#27272a] rounded-full overflow-hidden;
+    @apply w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden;
   }
 
   .score-bar-fill {
@@ -108,19 +121,27 @@ body {
   }
 
   .drawer-overlay {
-    @apply fixed inset-0 bg-black/80 z-40;
+    @apply fixed inset-0 bg-black/70 backdrop-blur-sm z-40;
   }
 
   .drawer-panel {
-    @apply fixed right-0 top-0 h-full w-full max-w-2xl bg-[#09090b] border-l border-[#27272a] shadow-2xl z-50 overflow-y-auto;
+    @apply fixed right-0 top-0 h-full w-full max-w-2xl bg-zinc-950 border-l border-zinc-800 shadow-2xl z-50 overflow-y-auto;
   }
 
   .nav-link {
-    @apply flex items-center gap-3 px-3 py-2 rounded-lg text-[#a1a1aa] font-medium transition-colors duration-150 hover:text-white hover:bg-[#27272a]/50;
+    @apply flex items-center gap-3 px-3 py-2 rounded-lg text-zinc-400 font-medium transition-colors duration-150 hover:text-zinc-100 hover:bg-zinc-800/50;
   }
 
   .nav-link-active {
-    @apply text-white bg-[#27272a];
+    @apply text-zinc-50 bg-zinc-800/80 border border-zinc-700/50;
+  }
+
+  .glow-accent {
+    box-shadow: 0 0 24px var(--color-primary-glow);
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-indigo-400 via-violet-400 to-cyan-400 bg-clip-text text-transparent;
   }
 }
 
@@ -135,7 +156,7 @@ body {
 }
 
 .radar-tooltip {
-  @apply absolute bg-[#27272a] border border-[#3f3f46] rounded-md px-2 py-1 text-xs text-white shadow-lg z-50 pointer-events-none;
+  @apply absolute bg-zinc-800 border border-zinc-700 rounded-md px-2 py-1 text-xs text-zinc-100 shadow-lg z-50 pointer-events-none;
   transform: translate(-50%, -100%);
   margin-top: -8px;
 }

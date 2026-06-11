@@ -3,6 +3,7 @@ import { getFirestore, collection as realCollection, query as realQuery, onSnaps
 import { getStorage, ref as realRef, uploadBytesResumable as realUploadBytesResumable, getDownloadURL as realGetDownloadURL } from 'firebase/storage'
 import { getAuth, onAuthStateChanged as realOnAuthStateChanged, signInWithEmailAndPassword as realSignInWithEmailAndPassword, signOut as realSignOut } from 'firebase/auth'
 import axios from 'axios'
+import { API_BASE_URL } from './config/api'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -17,16 +18,14 @@ const firebaseConfig = {
 // Determine Mock Mode — sync with backend's MOCK_MODE status
 // ---------------------------------------------------------------------------
 
-const BACKEND_URL = import.meta.env.VITE_API_URL || 
-  (import.meta.env.DEV ? 'http://127.0.0.1:8001/api' : '/api');
+const BACKEND_URL = API_BASE_URL
 
 // Check if the frontend config itself suggests mock mode
 const frontendSuggestsMock = !firebaseConfig.apiKey || firebaseConfig.apiKey.includes('your-') || firebaseConfig.apiKey === '';
+const forceMockEnv = import.meta.env.VITE_FORCE_MOCK_MODE === 'true'
 
-// FORCE_MOCK_MODE=true in backend .env means we should use mock mode
-// Since backend runs in mock mode (FORCE_MOCK_MODE=true), we default to mock mode
-// to avoid Firebase auth errors when backend doesn't use real Firebase
-const isMockMode = frontendSuggestsMock || true; // Force mock mode to match backend
+// Align with backend: use mock when Firebase isn't configured or explicitly forced
+const isMockMode = forceMockEnv || frontendSuggestsMock
 
 if (isMockMode) {
   console.info('[RecruitFlow] Running in MOCK MODE (aligned with backend FORCE_MOCK_MODE=true)');

@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import axios from 'axios'
+import client from '../api/client'
 import StatusPill from '../components/StatusPill'
 import TimelineStepper from '../components/TimelineStepper'
 import { Sparkles, Mail, FileText, ChevronRight, Zap, Info, Clock, AlertTriangle } from 'lucide-react'
-
-const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://127.0.0.1:8001/api' : '/api')
 
 const DIMENSION_DISPLAY = {
   technicalSkills: { label: 'Technical Skills', icon: '💻', colorClass: 'stroke-indigo-500', textClass: 'text-indigo-400', description: 'Technical expertise and coding capability fit' },
@@ -69,7 +67,7 @@ export default function CandidatePortal() {
       setLoading(true)
       setError(null)
       try {
-        const res = await axios.get(`${API_BASE}/candidate-portal/${candidateId}`)
+        const res = await client.get(`/candidate-portal/${candidateId}`)
         setData(res.data)
       } catch (err) {
         if (err.response?.status === 404) {

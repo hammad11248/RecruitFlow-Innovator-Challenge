@@ -1,14 +1,12 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useNavigate, Link } from 'react-router-dom'
-import axios from 'axios'
+import client from '../api/client'
 import { 
   Users, CheckCircle, BarChart3, Calendar, TrendingUp, Trophy, Search, RefreshCw, 
   LogOut, ArrowUpDown, ChevronRight, X, User, Briefcase, Mail, Phone, Clock, FileText, Activity 
 } from 'lucide-react'
 import StatusPill from '../components/StatusPill'
-
-const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://127.0.0.1:8001/api' : '/api')
 
 const STATUS_FILTERS = [
   { value: '', label: 'All', icon: '👥' },
@@ -36,89 +34,6 @@ const RANK_BADGES = {
   2: { bg: 'bg-gradient-to-r from-slate-300 to-slate-400 border border-zinc-800 shadow-sm', text: 'text-zinc-400 font-extrabold' },
   3: { bg: 'bg-gradient-to-r from-amber-600 to-orange-500 border border-orange-550 shadow-sm', text: 'text-orange-950 font-extrabold' },
 }
-
-const DEMO_CANDIDATES = [
-  {
-    id: 'demo-cand-001',
-    rank: 1,
-    name: 'Aanya Sharma',
-    email: 'aanya.sharma@example.com',
-    status: 'INTERVIEW_SCHEDULED',
-    compositeScore: 92,
-    createdAt: '2026-06-08T10:30:00Z',
-    jobId: 'demo-job-frontend',
-    skills: ['React', 'TypeScript', 'GraphQL', 'Firebase'],
-    dimensions: {
-      technicalSkills: { rawScore: 96 },
-      experienceSeniority: { rawScore: 88 },
-      assessmentPerformance: { rawScore: 91 },
-      cvQuality: { rawScore: 84 },
-      culturalFit: { rawScore: 90 },
-      engagement: { rawScore: 89 },
-    },
-    reviewSummary: 'Strong full-stack delivery background with high ownership, clear communication, and excellent assessment performance.',
-  },
-  {
-    id: 'demo-cand-002',
-    rank: 2,
-    name: 'Brian Lee',
-    email: 'brian.lee@example.com',
-    status: 'ASSESSMENT_SENT',
-    compositeScore: 84,
-    createdAt: '2026-06-07T14:10:00Z',
-    jobId: 'demo-job-platform',
-    skills: ['Python', 'FastAPI', 'PostgreSQL'],
-    dimensions: {
-      technicalSkills: { rawScore: 89 },
-      experienceSeniority: { rawScore: 81 },
-      assessmentPerformance: { rawScore: 78 },
-      cvQuality: { rawScore: 87 },
-      culturalFit: { rawScore: 82 },
-      engagement: { rawScore: 85 },
-    },
-    reviewSummary: 'Passed screening with a strong backend profile and is currently working through the assessment invitation.',
-  },
-  {
-    id: 'demo-cand-003',
-    rank: 3,
-    name: 'Sara Ahmed',
-    email: 'sara.ahmed@example.com',
-    status: 'AI_SCREENING_PASSED',
-    compositeScore: 76,
-    createdAt: '2026-06-06T09:25:00Z',
-    jobId: 'demo-job-data',
-    skills: ['SQL', 'Data Modeling', 'Power BI'],
-    dimensions: {
-      technicalSkills: { rawScore: 78 },
-      experienceSeniority: { rawScore: 74 },
-      assessmentPerformance: { rawScore: 0 },
-      cvQuality: { rawScore: 82 },
-      culturalFit: { rawScore: 77 },
-      engagement: { rawScore: 79 },
-    },
-    reviewSummary: 'Solid analytics candidate with dependable fundamentals and a well-structured resume profile.',
-  },
-  {
-    id: 'demo-cand-004',
-    rank: 4,
-    name: 'Daniel Okafor',
-    email: 'daniel.okafor@example.com',
-    status: 'AI_SCREENING_FAILED',
-    compositeScore: 58,
-    createdAt: '2026-06-05T16:45:00Z',
-    jobId: 'demo-job-ui',
-    skills: ['HTML', 'CSS', 'Accessibility'],
-    dimensions: {
-      technicalSkills: { rawScore: 61 },
-      experienceSeniority: { rawScore: 55 },
-      assessmentPerformance: { rawScore: 0 },
-      cvQuality: { rawScore: 72 },
-      culturalFit: { rawScore: 63 },
-      engagement: { rawScore: 52 },
-    },
-    reviewSummary: 'Early-stage applicant with promising frontend basics, but the current screening bar was not met.',
-  },
-]
 
 export default function HrDashboard() {
   const { user, logout } = useAuth()
@@ -152,15 +67,12 @@ export default function HrDashboard() {
   const [drawerLoading, setDrawerLoading] = useState(false)
   const [drawerTab, setDrawerTab] = useState('overview')
 
-  const visibleCandidates = candidates.length > 0 ? candidates : DEMO_CANDIDATES
-  const usingDemoData = !loading && candidates.length === 0
-
   /* Fetch leaderboard data */
   const fetchLeaderboard = async () => {
+    if (!user) return
     setLoading(true)
     setError(null)
     try {
-      const token = user?.getIdToken ? await user.getIdToken() : 'mock-token'
       const params = {
         sort_by: sortBy,
         sort_dir: sortDir,
@@ -169,10 +81,7 @@ export default function HrDashboard() {
       if (statusFilter) params.status = statusFilter
       if (searchQuery) params.search = searchQuery
 
-      const res = await axios.get(`${API_BASE}/hr/leaderboard`, {
-        params,
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await client.get('/hr/leaderboard', { params })
       setCandidates(res.data.leaderboard || [])
     } catch (err) {
       if (err.response?.status === 401) {
@@ -187,12 +96,10 @@ export default function HrDashboard() {
 
   /* Fetch jobs data */
   const fetchJobs = async () => {
+    if (!user) return
     setJobsLoading(true)
     try {
-      const token = user?.getIdToken ? await user.getIdToken() : 'mock-token'
-      const res = await axios.get(`${API_BASE}/jobs?active_only=false`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      const res = await client.get('/jobs', { params: { active_only: false } })
       setJobsList(res.data.jobs || [])
     } catch (err) {
       console.error("Failed to fetch jobs:", err)
@@ -210,7 +117,6 @@ export default function HrDashboard() {
     setNewJobSubmitting(true)
     setNewJobError('')
     try {
-      const token = user?.getIdToken ? await user.getIdToken() : 'mock-token'
       const skillsArray = newJobSkills.split(',').map(s => s.trim()).filter(Boolean)
       const criticalArray = newJobCritical.split(',').map(s => s.trim()).filter(Boolean)
       
@@ -224,9 +130,7 @@ export default function HrDashboard() {
         isActive: true
       }
       
-      await axios.post(`${API_BASE}/jobs`, jobData, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      await client.post('/jobs', jobData)
       
       setNewJobTitle('')
       setNewJobSkills('')
@@ -241,12 +145,13 @@ export default function HrDashboard() {
   }
 
   useEffect(() => {
+    if (!user) return
     if (activeTab === 'candidates') {
       fetchLeaderboard()
     } else {
       fetchJobs()
     }
-  }, [activeTab, statusFilter, sortBy, sortDir])
+  }, [user, activeTab, statusFilter, sortBy, sortDir])
 
   /* Periodic poll */
   useEffect(() => {
@@ -276,12 +181,10 @@ export default function HrDashboard() {
     setDrawerLoading(true)
     setDrawerTab('overview')
     try {
-      const token = user?.getIdToken ? await user.getIdToken() : 'mock-token'
-      const res = await axios.get(`${API_BASE}/hr/candidate/${candidate.id}/drill-down`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await client.get(`/hr/candidate/${candidate.id}/drill-down`)
       setSelectedCandidate(res.data)
     } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to load candidate details.')
       setSelectedCandidate(candidate)
     } finally {
       setDrawerLoading(false)
@@ -305,7 +208,7 @@ export default function HrDashboard() {
 
   /* Analytics stats */
   const stats = useMemo(() => {
-    const source = visibleCandidates
+    const source = candidates
     const total = source.length
     const passed = source.filter(c =>
       ['AI_SCREENING_PASSED', 'ASSESSMENT_SENT', 'ASSESSMENT_SUBMITTED', 'SCORED', 'INTERVIEW_SCHEDULED'].includes(c.status)
@@ -318,7 +221,7 @@ export default function HrDashboard() {
     const topPerformer = source.length > 0 ? source[0] : null
 
     return { total, passed, scored, interviews, avgScore, topPerformer }
-  }, [visibleCandidates])
+  }, [candidates])
 
   const handleLogout = async () => {
     await logout()
@@ -346,7 +249,7 @@ export default function HrDashboard() {
         {/* Header section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-zinc-800 pb-6 mb-8">
           <div>
-            <h1 className="text-3xl font-extrabold text-zinc-400 tracking-tight">
+            <h1 className="text-3xl font-extrabold text-zinc-50 tracking-tight">
               {activeTab === 'candidates' ? 'Candidate Leaderboard' : 'Job Positions'}
             </h1>
             <p className="text-zinc-400 text-xs mt-1"> COORDINATING 6-DIMENSION AI SCREENING METRICS IN REAL-TIME </p>
@@ -468,16 +371,6 @@ export default function HrDashboard() {
               </div>
             )}
 
-            {usingDemoData && (
-              <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl mb-6 flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-indigo-300 text-xs font-semibold uppercase tracking-wider">Demo data enabled</p>
-                  <p className="text-zinc-400 text-xs mt-1">Showing sample candidates because the live leaderboard is empty right now.</p>
-                </div>
-                <button onClick={fetchLeaderboard} className="text-xs text-indigo-300 hover:text-indigo-200 underline font-semibold whitespace-nowrap">Try live data</button>
-              </div>
-            )}
-
             {/* Table / Leaderboard Container */}
             {loading && candidates.length === 0 ? (
               <div className="space-y-4">
@@ -522,7 +415,20 @@ export default function HrDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {visibleCandidates.map((candidate, idx) => {
+                      {candidates.length === 0 ? (
+                        <tr>
+                          <td colSpan={12} className="px-6 py-16 text-center">
+                            <Users className="w-10 h-10 text-zinc-600 mx-auto mb-3" />
+                            <p className="text-zinc-300 font-semibold text-sm">No candidates yet</p>
+                            <p className="text-zinc-500 text-xs mt-1 max-w-sm mx-auto">
+                              Student applications will appear here once candidates submit via the application form.
+                            </p>
+                            <Link to="/" className="inline-block mt-4 text-xs text-indigo-400 hover:text-indigo-300 font-semibold">
+                              View Application Form →
+                            </Link>
+                          </td>
+                        </tr>
+                      ) : candidates.map((candidate, idx) => {
                         const rankNum = idx + 1
                         const rankBadge = RANK_BADGES[rankNum]
                         const dims = candidate.dimensions || candidate.scoreDimensions || {}
@@ -1133,7 +1039,7 @@ export default function HrDashboard() {
                       <div className="space-y-6 relative before:absolute before:left-5 before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-855 ml-2">
                         {STATUS_FILTERS.filter(f => f.value !== '').map((stepItem) => {
                           const isComplete = selectedCandidate.status === stepItem.value || 
-                            (selectedCandidate.stateHistory || []).some(h => h.status === stepItem.value)
+                            (selectedCandidate.stateHistory || []).some(h => (h.state || h.status) === stepItem.value)
 
                           return (
                             <div key={stepItem.value} className="flex items-start gap-4 relative animate-fade-in">

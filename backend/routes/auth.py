@@ -23,7 +23,14 @@ async def verify_firebase_token(
         return None
 
     token = credentials.credentials
-    if MOCK_MODE or token.startswith("mock-"):
+    # In mock mode, accept any bearer token so frontend can use mock or real Firebase
+    if MOCK_MODE:
+        return {
+            "uid": "mock-hr-uid",
+            "email": "hr@company.com",
+            "role": "recruiter"
+        }
+    if token == "mock-token" or token.startswith("mock-"):
         return {
             "uid": "mock-hr-uid",
             "email": "hr@company.com",

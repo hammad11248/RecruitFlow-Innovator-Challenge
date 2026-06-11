@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { useAssessment } from '../hooks/useAssessment'
+import { Clock, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react'
 
 export default function Assessment() {
   const { token } = useParams()
@@ -11,18 +12,16 @@ export default function Assessment() {
   const [activeQuestion, setActiveQuestion] = useState(0)
   const handleSubmitRef = useRef(null)
 
-  // Initialize timer when assessment loads
   useEffect(() => {
-    if (assessment && !assessment.answers?.length) {
-      const totalSeconds = (assessment.timeLimitMinutes || 120) * 60
-      setTimeLeft(totalSeconds)
-    }
-    if (assessment?.answers?.length > 0) {
+    if (!assessment) return
+    if (assessment.submitted) {
       setSubmitted(true)
+      return
     }
+    const totalSeconds = (assessment.timeLimitMinutes || 120) * 60
+    setTimeLeft(totalSeconds)
   }, [assessment])
 
-  // Countdown timer
   useEffect(() => {
     if (timeLeft === null || timeLeft <= 0 || submitted) return
 
@@ -40,7 +39,6 @@ export default function Assessment() {
     return () => clearInterval(timer)
   }, [timeLeft === null, submitted])
 
-
   const formatTime = (seconds) => {
     if (seconds === null) return '--:--'
     const m = Math.floor(seconds / 60)
@@ -49,7 +47,7 @@ export default function Assessment() {
   }
 
   const getTimeColor = () => {
-    if (timeLeft === null) return 'text-surface-400'
+    if (timeLeft === null) return 'text-zinc-400'
     if (timeLeft < 300) return 'text-rose-400'
     if (timeLeft < 600) return 'text-amber-400'
     return 'text-emerald-400'
@@ -77,7 +75,6 @@ export default function Assessment() {
     }
   }, [submitted, assessment, answers, submitAnswers])
 
-  // Keep ref updated with handleSubmit
   useEffect(() => {
     handleSubmitRef.current = handleSubmit
   }, [handleSubmit])
@@ -86,11 +83,8 @@ export default function Assessment() {
     return (
       <div className="page-container flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <svg className="animate-spin w-10 h-10 text-primary-400 mx-auto mb-4" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-          <p className="text-surface-400">Loading assessment...</p>
+          <Loader2 className="w-10 h-10 text-indigo-400 mx-auto mb-4 animate-spin" />
+          <p className="text-zinc-400">Loading assessment...</p>
         </div>
       </div>
     )
@@ -98,11 +92,12 @@ export default function Assessment() {
 
   if (error || !assessment) {
     return (
-      <div className="page-container flex items-center justify-center min-h-screen">
-        <div className="glass-card p-10 text-center max-w-md">
-          <div className="text-4xl mb-4">⚠️</div>
-          <h2 className="text-xl font-bold text-surface-50 mb-2">Assessment Not Found</h2>
-          <p className="text-surface-400">{error || 'This assessment link may have expired or is invalid.'}</p>
+      <div className="page-container flex items-center justify-center min-h-screen px-4">
+        <div className="glass-card p-10 text-center max-w-md w-full">
+          <AlertTriangle className="w-12 h-12 text-amber-400 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-zinc-50 mb-2">Assessment Not Found</h2>
+          <p className="text-zinc-400 text-sm">{error || 'This assessment link may have expired or is invalid.'}</p>
+          <p className="text-zinc-500 text-xs mt-4">Ensure the link matches: <code className="text-indigo-400">/assessment/{'{token}'}</code></p>
         </div>
       </div>
     )
@@ -110,19 +105,17 @@ export default function Assessment() {
 
   if (submitted) {
     return (
-      <div className="page-container flex items-center justify-center min-h-screen">
-        <div className="glass-card p-10 text-center max-w-lg animate-slide-up">
-          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
-            <svg className="w-10 h-10 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
+      <div className="page-container flex items-center justify-center min-h-screen px-4">
+        <div className="glass-card p-10 text-center max-w-lg w-full animate-slide-up">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center">
+            <CheckCircle2 className="w-10 h-10 text-emerald-400" />
           </div>
-          <h2 className="text-2xl font-bold text-surface-50 mb-3">Assessment Submitted! 🎉</h2>
-          <p className="text-surface-400 mb-6">Your answers are being evaluated by our AI system. You'll receive an email with your results shortly.</p>
+          <h2 className="text-2xl font-bold text-zinc-50 mb-3">Assessment Submitted</h2>
+          <p className="text-zinc-400 mb-6 text-sm">Your answers are being evaluated. You'll receive an email with your results shortly.</p>
           {assessment.score > 0 && (
-            <div className="p-4 bg-surface-800/50 rounded-xl border border-surface-700/30">
-              <p className="text-surface-400 text-sm">Your Score</p>
-              <p className="text-4xl font-bold text-primary-400">{Math.round(assessment.score)}<span className="text-surface-500 text-lg">/100</span></p>
+            <div className="p-4 bg-zinc-900/60 rounded-xl border border-zinc-800">
+              <p className="text-zinc-500 text-sm">Your Score</p>
+              <p className="text-4xl font-bold text-indigo-400 tabular-nums">{Math.round(assessment.score)}<span className="text-zinc-500 text-lg">/100</span></p>
             </div>
           )}
         </div>
@@ -134,47 +127,63 @@ export default function Assessment() {
   const currentQ = questions[activeQuestion]
 
   return (
-    <div className="page-container min-h-screen flex flex-col" id="assessment-page">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col" id="assessment-page">
       {/* Top Bar */}
-      <div className="h-16 bg-surface-900/90  border-b border-surface-700/30 flex items-center justify-between px-6 sticky top-0 z-20">
+      <div className="h-16 bg-zinc-900/90 backdrop-blur border-b border-zinc-800 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-20">
         <div className="flex items-center gap-4">
-          <h1 className="font-bold text-surface-100">Technical Assessment</h1>
-          <div className="flex items-center gap-1.5">
+          <h1 className="font-bold text-zinc-50 text-sm sm:text-base">Technical Assessment</h1>
+          <div className="hidden sm:flex items-center gap-1.5">
             {questions.map((_, idx) => (
               <button
                 key={idx}
                 onClick={() => setActiveQuestion(idx)}
-                className={`w-8 h-8 rounded-lg text-sm font-medium transition-all ${idx === activeQuestion ? 'bg-primary-500 text-white' : answers[questions[idx]?.id] ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30' : 'bg-surface-800 text-surface-400 hover:bg-surface-700'}`}
+                className={`w-8 h-8 rounded-lg text-sm font-medium transition-all ${
+                  idx === activeQuestion
+                    ? 'bg-indigo-600 text-white shadow-[0_0_12px_rgba(99,102,241,0.4)]'
+                    : answers[questions[idx]?.id]
+                    ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30'
+                    : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                }`}
               >
                 {idx + 1}
               </button>
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-6">
-          <div className={`font-mono text-lg font-bold ${getTimeColor()}`} id="timer">
-            ⏱ {formatTime(timeLeft)}
+        <div className="flex items-center gap-4 sm:gap-6">
+          <div className={`font-mono text-base sm:text-lg font-bold tabular-nums flex items-center gap-1.5 ${getTimeColor()}`} id="timer">
+            <Clock className="w-4 h-4" />
+            {formatTime(timeLeft)}
           </div>
-          <button onClick={handleSubmit} disabled={submitting} className="glass-button text-sm py-2 px-5 disabled:opacity-50" id="submit-assessment">
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="glass-button text-sm py-2 px-4 sm:px-5 disabled:opacity-50"
+            id="submit-assessment"
+          >
             {submitting ? 'Submitting...' : 'Submit All'}
           </button>
         </div>
       </div>
 
       {/* Split Pane */}
-      <div className="flex-1 flex">
+      <div className="flex-1 flex flex-col lg:flex-row">
         {/* Left: Instructions */}
-        <div className="w-1/2 border-r border-surface-700/30 p-8 overflow-y-auto">
+        <div className="w-full lg:w-1/2 border-b lg:border-b-0 lg:border-r border-zinc-800 p-6 sm:p-8 overflow-y-auto">
           {currentQ && (
             <div className="animate-fade-in">
-              <div className="flex items-center gap-3 mb-6">
-                <span className={`badge ${currentQ.type === 'mcq' ? 'bg-cyan-500/20 text-cyan-400' : currentQ.type === 'coding' ? 'bg-amber-500/20 text-amber-400' : 'bg-violet-500/20 text-violet-400'}`}>
-                  {currentQ.type === 'mcq' ? '📝 Multiple Choice' : currentQ.type === 'coding' ? '💻 Coding' : '📖 Open-Ended'}
+              <div className="flex items-center gap-3 mb-6 flex-wrap">
+                <span className={`badge ${
+                  currentQ.type === 'mcq' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/25' :
+                  currentQ.type === 'coding' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/25' :
+                  'bg-violet-500/15 text-violet-400 border border-violet-500/25'
+                }`}>
+                  {currentQ.type === 'mcq' ? 'Multiple Choice' : currentQ.type === 'coding' ? 'Coding' : 'Open-Ended'}
                 </span>
-                <span className="text-surface-500 text-sm">Question {activeQuestion + 1} of {questions.length}</span>
+                <span className="text-zinc-500 text-sm">Question {activeQuestion + 1} of {questions.length}</span>
               </div>
 
-              <h2 className="text-lg font-semibold text-surface-100 mb-6 leading-relaxed">{currentQ.prompt}</h2>
+              <h2 className="text-lg font-semibold text-zinc-50 mb-6 leading-relaxed">{currentQ.prompt}</h2>
 
               {currentQ.type === 'mcq' && (
                 <div className="space-y-3" id="mcq-options">
@@ -182,9 +191,13 @@ export default function Assessment() {
                     <button
                       key={idx}
                       onClick={() => updateAnswer(currentQ.id, option)}
-                      className={`w-full text-left p-4 rounded-xl border transition-all duration-200 ${answers[currentQ.id] === option ? 'bg-primary-500/15 border-primary-500/50 text-primary-300' : 'bg-surface-800/30 border-surface-700/30 text-surface-300 hover:bg-surface-800/50 hover:border-surface-600'}`}
+                      className={`w-full text-left p-4 rounded-xl border transition-all duration-200 ${
+                        answers[currentQ.id] === option
+                          ? 'bg-indigo-500/15 border-indigo-500/50 text-indigo-200'
+                          : 'bg-zinc-900/50 border-zinc-800 text-zinc-300 hover:bg-zinc-800/50 hover:border-zinc-700'
+                      }`}
                     >
-                      <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-surface-700/50 text-sm font-medium mr-3">
+                      <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-zinc-800 text-sm font-medium mr-3 text-zinc-300">
                         {String.fromCharCode(65 + idx)}
                       </span>
                       {option}
@@ -195,14 +208,14 @@ export default function Assessment() {
 
               {currentQ.type === 'coding' && currentQ.testCases?.length > 0 && (
                 <div className="mt-6">
-                  <h3 className="text-sm font-semibold text-surface-300 mb-3">Test Cases</h3>
+                  <h3 className="text-sm font-semibold text-zinc-300 mb-3">Test Cases</h3>
                   <div className="space-y-2">
                     {currentQ.testCases.map((tc, idx) => (
-                      <div key={idx} className="bg-surface-800/50 rounded-lg p-3 font-mono text-sm">
-                        <span className="text-surface-500">Input: </span>
+                      <div key={idx} className="bg-zinc-900/60 border border-zinc-800 rounded-lg p-3 font-mono text-sm">
+                        <span className="text-zinc-500">Input: </span>
                         <span className="text-cyan-400">{tc.input}</span>
                         <br />
-                        <span className="text-surface-500">Expected: </span>
+                        <span className="text-zinc-500">Expected: </span>
                         <span className="text-emerald-400">{tc.expected_output}</span>
                       </div>
                     ))}
@@ -214,53 +227,46 @@ export default function Assessment() {
         </div>
 
         {/* Right: Answer Area */}
-        <div className="w-1/2 p-8 overflow-y-auto">
+        <div className="w-full lg:w-1/2 p-6 sm:p-8 overflow-y-auto">
           {currentQ && (
-            <div className="h-full animate-fade-in">
+            <div className="h-full min-h-[300px] animate-fade-in">
               {currentQ.type === 'mcq' ? (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
                     {answers[currentQ.id] ? (
                       <>
-                        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary-500/20 flex items-center justify-center">
-                          <svg className="w-8 h-8 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
+                        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center">
+                          <CheckCircle2 className="w-8 h-8 text-indigo-400" />
                         </div>
-                        <p className="text-surface-200 font-medium">Answer selected</p>
-                        <p className="text-primary-400 mt-2 font-semibold">{answers[currentQ.id]}</p>
+                        <p className="text-zinc-200 font-medium">Answer selected</p>
+                        <p className="text-indigo-400 mt-2 font-semibold">{answers[currentQ.id]}</p>
                       </>
                     ) : (
-                      <p className="text-surface-500">Select an option from the left panel</p>
+                      <p className="text-zinc-500">Select an option from the left panel</p>
                     )}
                   </div>
                 </div>
               ) : (
-                <div className="h-full flex flex-col glass-card border-surface-700/50 overflow-hidden shadow-2xl">
-                  {/* IDE Tab Header */}
-                  <div className="h-11 bg-surface-950/80 border-b border-surface-800 flex items-center justify-between px-4">
+                <div className="h-full flex flex-col glass-card overflow-hidden">
+                  <div className="h-11 bg-zinc-950 border-b border-zinc-800 flex items-center justify-between px-4">
                     <div className="flex items-center gap-2">
                       <div className="flex gap-1.5">
                         <span className="w-3 h-3 rounded-full bg-rose-500/80" />
                         <span className="w-3 h-3 rounded-full bg-amber-500/80" />
                         <span className="w-3 h-3 rounded-full bg-emerald-500/80" />
                       </div>
-                      <div className="w-[1px] h-4 bg-surface-800 mx-2" />
-                      <div className="flex items-center gap-1.5 bg-surface-900 border border-surface-800/80 border-b-transparent rounded-t-lg px-3 py-1.5 text-xs text-primary-400 font-mono font-medium -mb-[13px] z-10 select-none">
-                        <span>{currentQ.type === 'coding' ? '🐍' : '📝'}</span>
-                        <span>{currentQ.type === 'coding' ? 'solution.py' : 'response.txt'}</span>
-                      </div>
+                      <span className="text-xs text-indigo-400 font-mono ml-2">
+                        {currentQ.type === 'coding' ? 'solution.py' : 'response.txt'}
+                      </span>
                     </div>
-                    <span className="text-surface-500 text-xs font-mono select-none">UTF-8</span>
+                    <span className="text-zinc-500 text-xs font-mono">UTF-8</span>
                   </div>
-
-                  {/* Textarea container with background */}
-                  <div className="flex-1 relative bg-surface-900/60 p-4">
+                  <div className="flex-1 relative bg-zinc-950 p-4 min-h-[240px]">
                     <textarea
                       value={answers[currentQ.id] || ''}
                       onChange={(e) => updateAnswer(currentQ.id, e.target.value)}
                       placeholder={currentQ.type === 'coding' ? 'def find_duplicates(arr):\n    # Your code here\n    pass' : 'Type your answer here...'}
-                      className={`w-full h-full bg-transparent resize-none border-none outline-none focus:ring-0 text-surface-200 placeholder-surface-650 focus:outline-none ${currentQ.type === 'coding' ? 'font-mono text-sm leading-relaxed' : 'text-sm'}`}
+                      className={`w-full h-full min-h-[200px] bg-transparent resize-none border-none outline-none focus:ring-0 text-zinc-200 placeholder-zinc-600 ${currentQ.type === 'coding' ? 'font-mono text-sm leading-relaxed' : 'text-sm'}`}
                       id={`answer-${currentQ.id}`}
                     />
                   </div>
