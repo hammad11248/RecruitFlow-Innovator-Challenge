@@ -48,7 +48,7 @@ export default function DrillDownDrawer({ candidate, open, onClose }) {
       {/* Overlay */}
       {open && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 animate-fade-in"
+          className="fixed inset-0 bg-black/60  z-40 animate-fade-in"
           onClick={onClose}
         />
       )}
@@ -61,7 +61,7 @@ export default function DrillDownDrawer({ candidate, open, onClose }) {
         id="drilldown-drawer"
       >
         {/* Header */}
-        <div className="sticky top-0 bg-surface-900/95 backdrop-blur-xl border-b border-surface-700/30 p-6 z-10">
+        <div className="sticky top-0 bg-surface-900/95  border-b border-surface-700/30 p-6 z-10">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500/20 to-violet-500/20 flex items-center justify-center text-primary-400 font-bold text-xl border border-primary-500/20">
@@ -222,9 +222,9 @@ export default function DrillDownDrawer({ candidate, open, onClose }) {
 
           {/* === ASSESSMENT TAB === */}
           {activeTab === 'assessment' && candidate.assessment && (
-            <div className="space-y-6 animate-fade-in text-slate-200">
+            <div className="space-y-6 animate-fade-in text-zinc-400">
               {/* Overall Assessment Score Summary */}
-              <div className="p-5 bg-surface-800/40 border border-surface-700/30 rounded-xl flex items-center justify-between shadow-[0_0_15px_rgba(99,102,241,0.03)]">
+              <div className="p-5 bg-surface-800/40 border border-surface-700/30 rounded-xl flex items-center justify-between shadow-sm">
                 <div>
                   <p className="text-[10px] text-surface-500 uppercase font-bold tracking-wider">Assessment Status</p>
                   <p className={`text-xs font-bold mt-1 ${candidate.assessment.passed ? 'text-emerald-400' : 'text-amber-400'}`}>

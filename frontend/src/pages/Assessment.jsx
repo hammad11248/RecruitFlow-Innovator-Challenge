@@ -136,7 +136,7 @@ export default function Assessment() {
   return (
     <div className="page-container min-h-screen flex flex-col" id="assessment-page">
       {/* Top Bar */}
-      <div className="h-16 bg-surface-900/90 backdrop-blur-xl border-b border-surface-700/30 flex items-center justify-between px-6 sticky top-0 z-20">
+      <div className="h-16 bg-surface-900/90  border-b border-surface-700/30 flex items-center justify-between px-6 sticky top-0 z-20">
         <div className="flex items-center gap-4">
           <h1 className="font-bold text-surface-100">Technical Assessment</h1>
           <div className="flex items-center gap-1.5">

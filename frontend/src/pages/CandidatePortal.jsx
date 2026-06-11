@@ -27,7 +27,7 @@ function CircularScore({ score, label, icon, colorClass, textClass, description 
   const offset = circumference - (score / 100) * circumference
 
   return (
-    <div className="bg-[#1A1A2E]/40 border border-slate-800 rounded-xl p-5 flex flex-col items-center text-center shadow-[0_0_15px_rgba(99,102,241,0.03)] hover:border-slate-700 transition-all duration-300 relative group">
+    <div className="glass-card border border-zinc-800 rounded-xl p-5 flex flex-col items-center text-center shadow-sm hover:border-zinc-800 transition-all duration-300 relative group">
       {/* SVG Circular Metric */}
       <div className="relative w-20 h-20 flex items-center justify-center">
         <svg className="w-full h-full transform -rotate-90">
@@ -46,10 +46,10 @@ function CircularScore({ score, label, icon, colorClass, textClass, description 
         <span className="absolute text-xl">{icon}</span>
       </div>
       <span className={`text-base font-extrabold mt-3 tabular-nums ${textClass}`}>{Math.round(score)}%</span>
-      <span className="text-[10px] text-slate-450 font-bold uppercase tracking-wider mt-1">{label}</span>
+      <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mt-1">{label}</span>
       
       {/* Tooltip Description */}
-      <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 translate-y-full opacity-0 group-hover:opacity-100 bg-[#0F0F1A] border border-slate-800 text-[10px] text-slate-400 px-3 py-1.5 rounded-lg w-40 text-center transition-all duration-200 pointer-events-none z-30 shadow-xl mt-1">
+      <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 translate-y-full opacity-0 group-hover:opacity-100 bg-zinc-950 border border-zinc-800 text-[10px] text-zinc-400 px-3 py-1.5 rounded-lg w-40 text-center transition-all duration-200 pointer-events-none z-30 shadow-xl mt-1">
         {description}
       </div>
     </div>
@@ -91,10 +91,10 @@ export default function CandidatePortal() {
   /* Loading State */
   if (loading && !data) {
     return (
-      <div className="min-h-screen bg-[#0F0F1A] text-slate-100 flex items-center justify-center">
+      <div className="min-h-screen bg-zinc-950 text-zinc-400 flex items-center justify-center">
         <div className="text-center space-y-4">
           <ActivityLoader />
-          <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider animate-pulse">
+          <p className="text-zinc-400 text-xs font-semibold uppercase tracking-wider animate-pulse">
             Connecting Evaluation Portal...
           </p>
         </div>
@@ -105,11 +105,11 @@ export default function CandidatePortal() {
   /* Error State */
   if (error) {
     return (
-      <div className="min-h-screen bg-[#0F0F1A] text-slate-100 flex items-center justify-center px-4">
-        <div className="bg-[#1A1A2E]/40 border border-slate-800 rounded-xl p-8 text-center max-w-md shadow-2xl backdrop-blur-xl">
+      <div className="min-h-screen bg-zinc-950 text-zinc-400 flex items-center justify-center px-4">
+        <div className="glass-card border border-zinc-800 rounded-xl p-8 text-center max-w-md shadow-2xl ">
           <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
-          <h2 className="text-lg font-bold text-slate-200">Portal Link Invalid</h2>
-          <p className="text-slate-450 text-xs mt-2 mb-6 leading-relaxed">{error}</p>
+          <h2 className="text-lg font-bold text-zinc-400">Portal Link Invalid</h2>
+          <p className="text-zinc-400 text-xs mt-2 mb-6 leading-relaxed">{error}</p>
           <Link to="/" className="inline-block bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold py-2.5 px-6 rounded-lg text-xs transition-all cursor-pointer">
             Create Application Profile
           </Link>
@@ -125,7 +125,7 @@ export default function CandidatePortal() {
   const completionPct = data.completionPercentage || 0
 
   return (
-    <div className="min-h-screen bg-[#0F0F1A] text-slate-100 font-sans relative overflow-hidden pb-12">
+    <div className="min-h-screen bg-zinc-950 text-zinc-400 font-sans relative overflow-hidden pb-12">
       {/* Background glowing effects */}
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-[#6366F1]/5 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-[#8B5CF6]/5 rounded-full blur-[120px] pointer-events-none" />
@@ -136,14 +136,14 @@ export default function CandidatePortal() {
       `}</style>
 
       {/* Header Banner */}
-      <header className="relative border-b border-slate-900 bg-[#0F0F1A]/80 backdrop-blur-xl sticky top-0 z-30">
+      <header className="relative border-b border-zinc-800 bg-zinc-950/80  sticky top-0 z-30">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8.5 h-8.5 rounded-lg bg-gradient-to-tr from-indigo-500 to-violet-500 flex items-center justify-center text-white font-bold text-sm shadow-md shadow-indigo-500/20">
               RF
             </div>
             <div>
-              <span className="font-bold text-slate-200 text-base">RecruitFlow</span>
+              <span className="font-bold text-zinc-400 text-base">RecruitFlow</span>
               <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider ml-2 px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20">
                 Candidate Portal
               </span>
@@ -157,21 +157,21 @@ export default function CandidatePortal() {
       <main className="relative max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-8 z-10">
         
         {/* Welcome Prominent Header */}
-        <div className="bg-[#1A1A2E]/40 border border-slate-800 rounded-xl p-8 text-center shadow-[0_0_30px_rgba(99,102,241,0.03)] backdrop-blur-xl animate-slide-up">
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-50 tracking-tight mb-2">
+        <div className="glass-card border border-zinc-800 rounded-xl p-8 text-center shadow-sm  animate-slide-up">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-zinc-400 tracking-tight mb-2">
             Welcome, {data.name?.split(' ')[0] || 'Candidate'} 👋
           </h1>
-          <p className="text-slate-400 text-sm max-w-md mx-auto leading-relaxed">
+          <p className="text-zinc-400 text-sm max-w-md mx-auto leading-relaxed">
             Your application processing record and evaluations are updated dynamically by our machine intelligence.
           </p>
 
           {/* Completion Progress Bar */}
           <div className="mt-6 max-w-sm mx-auto">
             <div className="flex items-center justify-between mb-2 text-xs font-semibold">
-              <span className="text-slate-450 uppercase tracking-wide">Analysis Progress</span>
+              <span className="text-zinc-400 uppercase tracking-wide">Analysis Progress</span>
               <span className="text-indigo-400">{completionPct}%</span>
             </div>
-            <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-850">
+            <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-zinc-800">
               <div
                 className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-400 transition-all duration-1000"
                 style={{ width: `${completionPct}%` }}
@@ -184,8 +184,8 @@ export default function CandidatePortal() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
           
           {/* Overall Performance Index */}
-          <div className="lg:col-span-5 bg-[#1A1A2E]/40 border border-slate-800 rounded-xl p-6 flex flex-col items-center justify-center text-center shadow-[0_0_20px_rgba(99,102,241,0.03)] backdrop-blur-xl animate-slide-up" style={{ animationDelay: '100ms' }}>
-            <h2 className="text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-6">
+          <div className="lg:col-span-5 glass-card border border-zinc-800 rounded-xl p-6 flex flex-col items-center justify-center text-center shadow-sm  animate-slide-up" style={{ animationDelay: '100ms' }}>
+            <h2 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-6">
               Overall Performance Index
             </h2>
             <div className="relative w-40 h-40 flex items-center justify-center">
@@ -204,8 +204,8 @@ export default function CandidatePortal() {
                 />
               </svg>
               <div className="absolute flex flex-col items-center">
-                <span className="text-3xl font-extrabold text-slate-100 tabular-nums">{Math.round(data.compositeScore || 0)}</span>
-                <span className="text-[9px] text-slate-500 uppercase tracking-wider font-bold mt-0.5">Rating Score</span>
+                <span className="text-3xl font-extrabold text-zinc-400 tabular-nums">{Math.round(data.compositeScore || 0)}</span>
+                <span className="text-[9px] text-zinc-400 uppercase tracking-wider font-bold mt-0.5">Rating Score</span>
               </div>
             </div>
           </div>
@@ -215,18 +215,18 @@ export default function CandidatePortal() {
             
             {/* Quick Stat Blocks */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-[#1A1A2E]/40 border border-slate-800 rounded-xl p-5 text-center shadow-[0_0_15px_rgba(99,102,241,0.02)]">
-                <p className="text-[9px] text-slate-500 uppercase tracking-wider font-bold">Screening Score</p>
+              <div className="glass-card border border-zinc-800 rounded-xl p-5 text-center shadow-sm">
+                <p className="text-[9px] text-zinc-400 uppercase tracking-wider font-bold">Screening Score</p>
                 <p className={`text-2xl font-extrabold mt-1.5 tabular-nums ${
                   (data.screeningScore || 0) >= 60 ? 'text-emerald-400' : 'text-amber-400'
                 }`}>
                   {Math.round(data.screeningScore || 0)}
                 </p>
               </div>
-              <div className="bg-[#1A1A2E]/40 border border-slate-800 rounded-xl p-5 text-center shadow-[0_0_15px_rgba(99,102,241,0.02)]">
-                <p className="text-[9px] text-slate-500 uppercase tracking-wider font-bold">Assessment Score</p>
+              <div className="glass-card border border-zinc-800 rounded-xl p-5 text-center shadow-sm">
+                <p className="text-[9px] text-zinc-400 uppercase tracking-wider font-bold">Assessment Score</p>
                 <p className={`text-2xl font-extrabold mt-1.5 tabular-nums ${
-                  (data.assessmentScore || 0) >= 60 ? 'text-emerald-400' : data.assessmentScore > 0 ? 'text-amber-400' : 'text-slate-600'
+                  (data.assessmentScore || 0) >= 60 ? 'text-emerald-400' : data.assessmentScore > 0 ? 'text-amber-400' : 'text-zinc-400'
                 }`}>
                   {data.assessmentScore > 0 ? Math.round(data.assessmentScore) : '—'}
                 </p>
@@ -250,7 +250,7 @@ export default function CandidatePortal() {
                 <span className="text-2xl">📅</span>
                 <div>
                   <p className="text-emerald-450 font-bold text-sm">Interview Scheduled!</p>
-                  <p className="text-slate-350 text-xs mt-0.5">
+                  <p className="text-zinc-400 text-xs mt-0.5">
                     {new Date(data.interviewScheduledAt).toLocaleDateString('en-US', {
                       weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
                     })} at {new Date(data.interviewScheduledAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
@@ -260,8 +260,8 @@ export default function CandidatePortal() {
             )}
 
             {/* Completed modules metadata block */}
-            <div className="bg-[#1A1A2E]/40 border border-slate-800 rounded-xl p-5">
-              <p className="text-[9px] text-slate-500 uppercase tracking-wider font-bold mb-3">Completed Modules</p>
+            <div className="glass-card border border-zinc-800 rounded-xl p-5">
+              <p className="text-[9px] text-zinc-400 uppercase tracking-wider font-bold mb-3">Completed Modules</p>
               <div className="flex flex-wrap gap-1.5">
                 {(data.completedModules || []).map((mod, idx) => (
                   <span key={idx} className="px-2.5 py-0.5 bg-emerald-500/10 text-emerald-450 border border-emerald-500/15 rounded text-[10px] font-bold">
@@ -269,7 +269,7 @@ export default function CandidatePortal() {
                   </span>
                 ))}
                 {(!data.completedModules || data.completedModules.length === 0) && (
-                  <span className="text-slate-550 text-xs">Awaiting timeline milestones.</span>
+                  <span className="text-zinc-400 text-xs">Awaiting timeline milestones.</span>
                 )}
               </div>
             </div>
@@ -279,7 +279,7 @@ export default function CandidatePortal() {
         {/* 6 Responsive Circular Progress Metrics displaying evaluated criteria */}
         {hasDimensions && (
           <div className="animate-slide-up" style={{ animationDelay: '300ms' }}>
-            <h2 className="text-sm font-bold text-slate-300 mb-5 flex items-center gap-2">
+            <h2 className="text-sm font-bold text-zinc-400 mb-5 flex items-center gap-2">
               <span className="text-lg">📊</span>
               <span>Evaluated Metric Parameters</span>
             </h2>
@@ -306,8 +306,8 @@ export default function CandidatePortal() {
         )}
 
         {/* Pipeline Timeline */}
-        <div className="bg-[#1A1A2E]/40 border border-slate-800 rounded-xl p-8 animate-slide-up shadow-[0_0_20px_rgba(0,0,0,0.15)]" style={{ animationDelay: '400ms' }}>
-          <h2 className="text-sm font-bold text-slate-300 mb-6 flex items-center gap-2">
+        <div className="glass-card border border-zinc-800 rounded-xl p-8 animate-slide-up shadow-sm" style={{ animationDelay: '400ms' }}>
+          <h2 className="text-sm font-bold text-zinc-400 mb-6 flex items-center gap-2">
             <span className="text-lg">🛤️</span>
             <span>Evaluation Milestones</span>
           </h2>
@@ -321,7 +321,7 @@ export default function CandidatePortal() {
 
         {/* Support inquiries */}
         <div className="text-center py-6 animate-slide-up" style={{ animationDelay: '500ms' }}>
-          <p className="text-slate-550 text-xs">
+          <p className="text-zinc-400 text-xs">
             Assistance required?{' '}
             <a href="mailto:support@recruitflow.com" className="text-indigo-400 hover:text-indigo-300 transition-colors font-medium">
               Contact Coordination Team

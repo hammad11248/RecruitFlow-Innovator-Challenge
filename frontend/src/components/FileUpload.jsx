@@ -110,8 +110,8 @@ export default function FileUpload({ onUploadSuccess }) {
   }
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl text-slate-200">
-      <h2 className="text-lg font-semibold text-slate-100 mb-4 flex items-center gap-2">
+    <div className="bg-slate-900 border border-zinc-800 rounded-xl p-6 shadow-xl text-zinc-400">
+      <h2 className="text-lg font-semibold text-zinc-400 mb-4 flex items-center gap-2">
         <Upload className="w-5 h-5 text-indigo-500" />
         Upload Candidate CV
       </h2>
@@ -130,8 +130,8 @@ export default function FileUpload({ onUploadSuccess }) {
             <span className="font-semibold">CV uploaded and parsed successfully!</span>
           </div>
           {candidateId && (
-            <p className="text-xs text-slate-400 ml-6">
-              Candidate ID: <span className="font-mono bg-slate-950 px-1.5 py-0.5 rounded select-all text-slate-200 border border-slate-850">{candidateId}</span>
+            <p className="text-xs text-zinc-400 ml-6">
+              Candidate ID: <span className="font-mono bg-slate-950 px-1.5 py-0.5 rounded select-all text-zinc-400 border border-zinc-800">{candidateId}</span>
             </p>
           )}
         </div>
@@ -139,38 +139,38 @@ export default function FileUpload({ onUploadSuccess }) {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Candidate Name</label>
+          <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">Candidate Name</label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             disabled={loading}
             placeholder="John Doe"
-            className="w-full bg-slate-950 border border-slate-850 hover:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3.5 py-2 text-sm text-slate-200 placeholder-slate-650 transition-all outline-none"
+            className="w-full bg-slate-950 border border-zinc-800 hover:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3.5 py-2 text-sm text-zinc-400 placeholder-slate-650 transition-all outline-none"
             required
           />
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Candidate Email</label>
+          <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">Candidate Email</label>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={loading}
             placeholder="john.doe@example.com"
-            className="w-full bg-slate-950 border border-slate-850 hover:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3.5 py-2 text-sm text-slate-200 placeholder-slate-650 transition-all outline-none"
+            className="w-full bg-slate-950 border border-zinc-800 hover:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3.5 py-2 text-sm text-zinc-400 placeholder-slate-650 transition-all outline-none"
             required
           />
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Apply for Job Position</label>
+          <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">Apply for Job Position</label>
           <select
             value={jobId}
             onChange={(e) => setJobId(e.target.value)}
             disabled={loading}
-            className="w-full bg-slate-950 border border-slate-850 hover:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3.5 py-2 text-sm text-slate-200 transition-all outline-none cursor-pointer"
+            className="w-full bg-slate-950 border border-zinc-800 hover:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3.5 py-2 text-sm text-zinc-400 transition-all outline-none cursor-pointer"
           >
             <option value="job-frontend">Frontend React Developer</option>
             <option value="job-backend">Backend Python Developer</option>
@@ -187,7 +187,7 @@ export default function FileUpload({ onUploadSuccess }) {
           className={`relative border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition-all ${
             dragActive 
               ? 'border-indigo-500 bg-indigo-500/5' 
-              : 'border-slate-850 hover:border-slate-800 hover:bg-slate-950/20'
+              : 'border-zinc-800 hover:border-zinc-800 hover:bg-slate-950/20'
           }`}
         >
           <input
@@ -202,14 +202,14 @@ export default function FileUpload({ onUploadSuccess }) {
           {file ? (
             <div className="flex flex-col items-center text-center">
               <FileText className="w-10 h-10 text-indigo-400 mb-2" />
-              <span className="text-sm font-medium text-slate-300 max-w-[200px] truncate">{file.name}</span>
-              <span className="text-xs text-slate-500 mt-1">{(file.size / 1024).toFixed(1)} KB</span>
+              <span className="text-sm font-medium text-zinc-400 max-w-[200px] truncate">{file.name}</span>
+              <span className="text-xs text-zinc-400 mt-1">{(file.size / 1024).toFixed(1)} KB</span>
             </div>
           ) : (
             <div className="flex flex-col items-center text-center">
-              <Upload className="w-10 h-10 text-slate-650 mb-2" />
-              <span className="text-sm font-medium text-slate-400">Drag & drop CV or <span className="text-indigo-500 hover:text-indigo-400 font-semibold">Browse</span></span>
-              <span className="text-xs text-slate-550 mt-1">Only PDF and DOCX files are supported</span>
+              <Upload className="w-10 h-10 text-zinc-400 mb-2" />
+              <span className="text-sm font-medium text-zinc-400">Drag & drop CV or <span className="text-indigo-500 hover:text-indigo-400 font-semibold">Browse</span></span>
+              <span className="text-xs text-zinc-400 mt-1">Only PDF and DOCX files are supported</span>
             </div>
           )}
         </div>

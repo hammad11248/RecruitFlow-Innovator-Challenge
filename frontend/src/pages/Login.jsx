@@ -49,7 +49,7 @@ export default function Login() {
   }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden moving-gradient text-slate-100 font-sans">
+    <div className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden moving-gradient text-zinc-400 font-sans">
       
       {/* Moving gradient background stylesheet */}
       <style>{`
@@ -81,24 +81,24 @@ export default function Login() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
             </svg>
           </div>
-          <h1 className="text-3xl font-extrabold text-slate-50 tracking-tight">RecruitFlow HR</h1>
-          <p className="text-slate-400 mt-2 text-sm">Sign in or register to coordinate candidate evaluation pipelines</p>
+          <h1 className="text-3xl font-extrabold text-zinc-400 tracking-tight">RecruitFlow HR</h1>
+          <p className="text-zinc-400 mt-2 text-sm">Sign in or register to coordinate candidate evaluation pipelines</p>
         </div>
 
         {/* Glass Login Card */}
-        <div className="bg-[#1A1A2E]/40 backdrop-blur-xl border border-slate-800 rounded-xl p-8 shadow-[0_0_40px_rgba(99,102,241,0.05)] relative overflow-hidden">
+        <div className="glass-card  border border-zinc-800 rounded-xl p-8 shadow-sm relative overflow-hidden">
           {/* Card subtle lighting filter */}
           <div className="absolute inset-0 bg-gradient-to-tr from-white/2 to-white/0 pointer-events-none" />
 
           {/* Mode Selector Tabs */}
-          <div className="flex border-b border-slate-800 pb-2 mb-6 relative z-10">
+          <div className="flex border-b border-zinc-800 pb-2 mb-6 relative z-10">
             <button
               onClick={() => { setMode('login'); setError(''); }}
               type="button"
               className={`flex-1 text-center pb-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
                 mode === 'login'
                   ? 'text-indigo-400 border-b-2 border-indigo-500 font-extrabold'
-                  : 'text-slate-550 hover:text-slate-350'
+                  : 'text-zinc-400 hover:text-zinc-400'
               }`}
             >
               Sign In
@@ -109,7 +109,7 @@ export default function Login() {
               className={`flex-1 text-center pb-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
                 mode === 'register'
                   ? 'text-indigo-400 border-b-2 border-indigo-500 font-extrabold'
-                  : 'text-slate-550 hover:text-slate-350'
+                  : 'text-zinc-400 hover:text-zinc-400'
               }`}
             >
               Register Account
@@ -126,11 +126,11 @@ export default function Login() {
 
             {/* Email field (icon prefixed) */}
             <div className="space-y-2">
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider" htmlFor="email">
+              <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider" htmlFor="email">
                 Email Address
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
                   <Mail className="w-4 h-4" />
                 </div>
                 <input
@@ -140,18 +140,18 @@ export default function Login() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="hr@recruitflow.com"
                   required
-                  className="block w-full pl-10 pr-4 py-3 bg-[#16213E]/50 border border-slate-855 focus:border-indigo-500 rounded-lg text-slate-200 outline-none text-sm placeholder-slate-650 transition-all focus:ring-1 focus:ring-indigo-500"
+                  className="block w-full pl-10 pr-4 py-3 bg-zinc-800/50 border border-zinc-800 focus:border-indigo-500 rounded-lg text-zinc-400 outline-none text-sm placeholder-slate-650 transition-all focus:ring-1 focus:ring-indigo-500"
                 />
               </div>
             </div>
 
             {/* Password field (icon prefixed) */}
             <div className="space-y-2">
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider" htmlFor="password">
+              <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider" htmlFor="password">
                 Password
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
                   <Lock className="w-4 h-4" />
                 </div>
                 <input
@@ -161,7 +161,7 @@ export default function Login() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  className="block w-full pl-10 pr-4 py-3 bg-[#16213E]/50 border border-slate-855 focus:border-indigo-500 rounded-lg text-slate-200 outline-none text-sm placeholder-slate-650 transition-all focus:ring-1 focus:ring-indigo-500"
+                  className="block w-full pl-10 pr-4 py-3 bg-zinc-800/50 border border-zinc-800 focus:border-indigo-500 rounded-lg text-zinc-400 outline-none text-sm placeholder-slate-650 transition-all focus:ring-1 focus:ring-indigo-500"
                 />
               </div>
             </div>
@@ -169,24 +169,24 @@ export default function Login() {
             {/* Role dropdown (only shown during registration) */}
             {mode === 'register' && (
               <div className="space-y-2">
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider" htmlFor="role">
+                <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider" htmlFor="role">
                   HR Role
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
                     <UserCheck className="w-4 h-4" />
                   </div>
                   <select
                     id="role"
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
-                    className="block w-full pl-10 pr-4 py-3 bg-[#16213E]/50 border border-slate-855 focus:border-indigo-500 rounded-lg text-slate-200 outline-none text-sm placeholder-slate-650 transition-all focus:ring-1 focus:ring-indigo-500 appearance-none cursor-pointer"
+                    className="block w-full pl-10 pr-4 py-3 bg-zinc-800/50 border border-zinc-800 focus:border-indigo-500 rounded-lg text-zinc-400 outline-none text-sm placeholder-slate-650 transition-all focus:ring-1 focus:ring-indigo-500 appearance-none cursor-pointer"
                   >
-                    <option value="recruiter" className="bg-[#1A1A2E]">Recruiter</option>
-                    <option value="interviewer" className="bg-[#1A1A2E]">Interviewer</option>
-                    <option value="hr_manager" className="bg-[#1A1A2E]">HR Manager</option>
+                    <option value="recruiter" className="bg-zinc-900">Recruiter</option>
+                    <option value="interviewer" className="bg-zinc-900">Interviewer</option>
+                    <option value="hr_manager" className="bg-zinc-900">HR Manager</option>
                   </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-zinc-400">
                     <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                       <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
                     </svg>
@@ -216,7 +216,7 @@ export default function Login() {
 
 
         {/* Back to Application link */}
-        <p className="text-center text-slate-500 text-xs mt-6">
+        <p className="text-center text-zinc-400 text-xs mt-6">
           Not an administrator?{' '}
           <Link to="/" className="text-indigo-400 hover:text-indigo-300 transition-colors font-medium">
             Candidate Application Form

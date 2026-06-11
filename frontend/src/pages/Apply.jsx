@@ -194,7 +194,7 @@ export default function Apply() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0F0F1A] text-slate-100 font-sans relative overflow-hidden px-4 py-8 md:py-16">
+    <div className="min-h-screen bg-zinc-950 text-zinc-400 font-sans relative overflow-hidden px-4 py-8 md:py-16">
       {/* Background glowing effects */}
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-violet-500/5 rounded-full blur-[120px] pointer-events-none" />
@@ -211,10 +211,10 @@ export default function Apply() {
             <Sparkles className="w-3.5 h-3.5" />
             <span>Autonomous Ingestion Pipeline</span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-extrabold text-slate-50 tracking-tight">
+          <h1 className="text-4xl md:text-5xl font-extrabold text-zinc-400 tracking-tight">
             Apply to <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-cyan-400 bg-clip-text text-transparent">RecruitFlow</span>
           </h1>
-          <p className="text-slate-400 mt-3 text-base md:text-lg max-w-lg mx-auto">
+          <p className="text-zinc-400 mt-3 text-base md:text-lg max-w-lg mx-auto">
             Submit your credentials and monitor the real-time evaluation process.
           </p>
         </div>
@@ -222,12 +222,12 @@ export default function Apply() {
         {/* High-tech Split Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* LEFT COLUMN: UPLOAD WORKFLOW */}
-          <div className="lg:col-span-5 bg-[#1A1A2E]/40 backdrop-blur-xl border border-slate-800 rounded-xl p-6 md:p-8 shadow-[0_0_30px_rgba(99,102,241,0.05)]">
+          <div className="lg:col-span-5 glass-card  border border-zinc-800 rounded-xl p-6 md:p-8 shadow-sm">
             {step === 'form' && (
               <div className="space-y-6">
                 <form onSubmit={handleSubmit} className="space-y-6" id="apply-form">
-                  <div className="border-b border-slate-800 pb-4 mb-4">
-                    <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                  <div className="border-b border-zinc-800 pb-4 mb-4">
+                    <h2 className="text-lg font-bold text-zinc-400 flex items-center gap-2">
                       <User className="w-5 h-5 text-indigo-400" />
                       Applicant Credentials
                     </h2>
@@ -249,11 +249,11 @@ export default function Apply() {
                       onChange={(e) => setName(e.target.value)}
                       required
                       placeholder=" "
-                      className="block py-2.5 px-0 w-full text-sm text-slate-200 bg-transparent border-0 border-b-2 border-slate-800 appearance-none focus:outline-none focus:ring-0 focus:border-indigo-500 transition-all peer"
+                      className="block py-2.5 px-0 w-full text-sm text-zinc-400 bg-transparent border-0 border-b-2 border-zinc-800 appearance-none focus:outline-none focus:ring-0 focus:border-indigo-500 transition-all peer"
                     />
                     <label
                       htmlFor="apply-name"
-                      className="peer-focus:font-medium absolute text-sm text-slate-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 peer-focus:text-indigo-400 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
+                      className="peer-focus:font-medium absolute text-sm text-zinc-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 peer-focus:text-indigo-400 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
                     >
                       Full Name
                     </label>
@@ -261,11 +261,11 @@ export default function Apply() {
 
                   {/* Email Address */}
                   <div className="space-y-2">
-                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider">
                       Email Address
                     </label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
                         <Mail className="w-4 h-4" />
                       </div>
                       <input
@@ -274,7 +274,7 @@ export default function Apply() {
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="you@example.com"
                         required
-                        className="block w-full pl-10 pr-4 py-3 bg-[#16213E]/50 border border-slate-800 focus:border-indigo-500 rounded-lg text-slate-200 outline-none text-sm placeholder-slate-650 transition-all focus:ring-1 focus:ring-indigo-500"
+                        className="block w-full pl-10 pr-4 py-3 bg-zinc-800/50 border border-zinc-800 focus:border-indigo-500 rounded-lg text-zinc-400 outline-none text-sm placeholder-slate-650 transition-all focus:ring-1 focus:ring-indigo-500"
                       />
                     </div>
                   </div>
@@ -287,11 +287,11 @@ export default function Apply() {
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder=" "
-                      className="block py-2.5 px-0 w-full text-sm text-slate-200 bg-transparent border-0 border-b-2 border-slate-800 appearance-none focus:outline-none focus:ring-0 focus:border-indigo-500 transition-all peer"
+                      className="block py-2.5 px-0 w-full text-sm text-zinc-400 bg-transparent border-0 border-b-2 border-zinc-800 appearance-none focus:outline-none focus:ring-0 focus:border-indigo-500 transition-all peer"
                     />
                     <label
                       htmlFor="apply-phone"
-                      className="peer-focus:font-medium absolute text-sm text-slate-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 peer-focus:text-indigo-400 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
+                      className="peer-focus:font-medium absolute text-sm text-zinc-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 peer-focus:text-indigo-400 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
                     >
                       Phone Number (Optional)
                     </label>
@@ -299,22 +299,22 @@ export default function Apply() {
 
                   {/* Selector Dropdown: Positions */}
                   <div className="space-y-2">
-                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider" htmlFor="apply-job">Apply for Position</label>
+                    <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider" htmlFor="apply-job">Apply for Position</label>
                     <div className="relative">
                       <select
                         id="apply-job"
                         value={jobId}
                         onChange={(e) => setJobId(e.target.value)}
-                        className="block w-full px-4 py-3 bg-[#16213E]/50 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-transparent appearance-none cursor-pointer text-sm transition-all"
+                        className="block w-full px-4 py-3 bg-zinc-800/50 border border-zinc-800 rounded-lg text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-transparent appearance-none cursor-pointer text-sm transition-all"
                       >
                         {jobs.length === 0 && <option value="">No positions available</option>}
                         {jobs.map((job) => (
-                          <option key={job.id} value={job.id} className="bg-[#1A1A2E]">
+                          <option key={job.id} value={job.id} className="bg-zinc-900">
                             {job.title}
                           </option>
                         ))}
                       </select>
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-zinc-400">
                         <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                           <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
                         </svg>
@@ -324,7 +324,7 @@ export default function Apply() {
 
                   {/* CV Upload Drag-Drop Area */}
                   <div className="space-y-2">
-                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Upload CV Document</label>
+                    <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider">Upload CV Document</label>
                     <div
                       onDragEnter={handleDrag}
                       onDragOver={handleDrag}
@@ -332,8 +332,8 @@ export default function Apply() {
                       onDrop={handleDrop}
                       className={`relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-300 overflow-hidden ${
                         file 
-                          ? 'border-indigo-500 bg-indigo-500/5 shadow-[0_0_15px_rgba(99,102,241,0.05)]' 
-                          : 'border-slate-800 hover:border-transparent bg-slate-900/30'
+                          ? 'border-indigo-500 bg-indigo-500/5 shadow-sm' 
+                          : 'border-zinc-800 hover:border-transparent bg-slate-900/30'
                       } group`}
                     >
                       {/* Gradient background on hover */}
@@ -351,16 +351,16 @@ export default function Apply() {
                           <div className="w-12 h-12 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
                             <FileText className="w-6 h-6 text-indigo-400" />
                           </div>
-                          <p className="text-sm font-semibold text-slate-200 max-w-[220px] truncate">{file.name}</p>
-                          <p className="text-xs text-slate-550">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                          <p className="text-sm font-semibold text-zinc-400 max-w-[220px] truncate">{file.name}</p>
+                          <p className="text-xs text-zinc-400">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
                         </div>
                       ) : (
                         <div className="flex flex-col items-center justify-center">
-                          <Upload className="w-8 h-8 text-slate-500 mb-3 group-hover:text-indigo-400 group-hover:scale-110 transition-all duration-300" />
-                          <p className="text-sm font-medium text-slate-300">
+                          <Upload className="w-8 h-8 text-zinc-400 mb-3 group-hover:text-indigo-400 group-hover:scale-110 transition-all duration-300" />
+                          <p className="text-sm font-medium text-zinc-400">
                             Drag CV here or <span className="text-indigo-400 font-semibold group-hover:underline">browse</span>
                           </p>
-                          <p className="text-xs text-slate-550 mt-1">PDF or DOCX (Max 10MB)</p>
+                          <p className="text-xs text-zinc-400 mt-1">PDF or DOCX (Max 10MB)</p>
                         </div>
                       )}
                     </div>
@@ -381,37 +381,37 @@ export default function Apply() {
             {/* Application Success Summary (Locked Left State after Submission) */}
             {(step === 'uploading' || step === 'tracking') && (
               <div className="space-y-6">
-                <div className="border-b border-slate-800 pb-4 mb-4">
-                  <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                <div className="border-b border-zinc-800 pb-4 mb-4">
+                  <h2 className="text-lg font-bold text-zinc-400 flex items-center gap-2">
                     <CheckCircle2 className="w-5 h-5 text-emerald-400 animate-pulse" />
                     Application Ingested
                   </h2>
                 </div>
 
-                <div className="bg-[#16213E]/40 border border-slate-800 rounded-xl p-5 space-y-4 shadow-[0_0_15px_rgba(99,102,241,0.03)]">
+                <div className="bg-zinc-800/40 border border-zinc-800 rounded-xl p-5 space-y-4 shadow-sm">
                   <div className="flex flex-col gap-1">
-                    <span className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Applicant</span>
-                    <span className="text-sm font-semibold text-slate-200">{name}</span>
+                    <span className="text-[10px] text-zinc-400 uppercase tracking-wider font-bold">Applicant</span>
+                    <span className="text-sm font-semibold text-zinc-400">{name}</span>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Email Address</span>
-                    <span className="text-sm font-semibold text-slate-200">{email}</span>
+                    <span className="text-[10px] text-zinc-400 uppercase tracking-wider font-bold">Email Address</span>
+                    <span className="text-sm font-semibold text-zinc-400">{email}</span>
                   </div>
                   {phone && (
                     <div className="flex flex-col gap-1">
-                      <span className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Phone</span>
-                      <span className="text-sm font-semibold text-slate-200">{phone}</span>
+                      <span className="text-[10px] text-zinc-400 uppercase tracking-wider font-bold">Phone</span>
+                      <span className="text-sm font-semibold text-zinc-400">{phone}</span>
                     </div>
                   )}
                   <div className="flex flex-col gap-1">
-                    <span className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Position Code</span>
+                    <span className="text-[10px] text-zinc-400 uppercase tracking-wider font-bold">Position Code</span>
                     <span className="text-sm font-mono text-indigo-400 font-semibold">{jobId}</span>
                   </div>
                 </div>
 
-                <div className="flex flex-col items-center justify-center p-6 bg-slate-900/40 border border-dashed border-slate-850 rounded-xl">
+                <div className="flex flex-col items-center justify-center p-6 bg-slate-900/40 border border-dashed border-zinc-800 rounded-xl">
                   <Zap className="w-6 h-6 text-indigo-400 mb-2 animate-bounce" />
-                  <p className="text-xs text-slate-400 text-center font-medium">
+                  <p className="text-xs text-zinc-400 text-center font-medium">
                     Evaluation status updates live. Keep this page open to track AI parsing and score outputs.
                   </p>
                 </div>
@@ -420,16 +420,16 @@ export default function Apply() {
           </div>
 
           {/* RIGHT COLUMN: REAL-TIME PIPELINE OR PROGRESS TRACKING */}
-          <div className="lg:col-span-7 bg-[#1A1A2E]/30 backdrop-blur-md border border-slate-800 rounded-xl p-6 md:p-8 shadow-[0_0_20px_rgba(0,0,0,0.2)]">
+          <div className="lg:col-span-7 bg-zinc-900/30  border border-zinc-800 rounded-xl p-6 md:p-8 shadow-sm">
             
             {/* Step: Form Input - Show Pipeline Preview */}
             {step === 'form' && (
               <div className="space-y-6">
-                <div className="flex items-center gap-3 border-b border-slate-800 pb-4 mb-4">
+                <div className="flex items-center gap-3 border-b border-zinc-800 pb-4 mb-4">
                   <div className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-                  <h3 className="text-lg font-bold text-slate-100 tracking-tight">AI Evaluation Stream</h3>
+                  <h3 className="text-lg font-bold text-zinc-400 tracking-tight">AI Evaluation Stream</h3>
                 </div>
-                <p className="text-slate-400 text-sm leading-relaxed">
+                <p className="text-zinc-400 text-sm leading-relaxed">
                   Submit your resume to trigger the RecruitFlow evaluation pipeline. Once submitted, our system runs the following autonomous procedures:
                 </p>
 
@@ -439,8 +439,8 @@ export default function Apply() {
                       1
                     </div>
                     <div>
-                      <h4 className="text-sm font-semibold text-slate-200">Native Resume Parsing</h4>
-                      <p className="text-xs text-slate-450 mt-0.5">Gemini processes the PDF/DOCX to extract skills, seniority parameters, and experience records.</p>
+                      <h4 className="text-sm font-semibold text-zinc-400">Native Resume Parsing</h4>
+                      <p className="text-xs text-zinc-400 mt-0.5">Gemini processes the PDF/DOCX to extract skills, seniority parameters, and experience records.</p>
                     </div>
                   </div>
 
@@ -449,8 +449,8 @@ export default function Apply() {
                       2
                     </div>
                     <div>
-                      <h4 className="text-sm font-semibold text-slate-200">6-Dimension Matrix Scoring</h4>
-                      <p className="text-xs text-slate-450 mt-0.5">Scoring metrics mapped across Technical capability, Fit, CV clarity, and Seniority match.</p>
+                      <h4 className="text-sm font-semibold text-zinc-400">6-Dimension Matrix Scoring</h4>
+                      <p className="text-xs text-zinc-400 mt-0.5">Scoring metrics mapped across Technical capability, Fit, CV clarity, and Seniority match.</p>
                     </div>
                   </div>
 
@@ -459,8 +459,8 @@ export default function Apply() {
                       3
                     </div>
                     <div>
-                      <h4 className="text-sm font-semibold text-slate-200">Automated Screening</h4>
-                      <p className="text-xs text-slate-450 mt-0.5">Candidates meeting threshold standards immediately pass screening to the technical assessment.</p>
+                      <h4 className="text-sm font-semibold text-zinc-400">Automated Screening</h4>
+                      <p className="text-xs text-zinc-400 mt-0.5">Candidates meeting threshold standards immediately pass screening to the technical assessment.</p>
                     </div>
                   </div>
 
@@ -469,8 +469,8 @@ export default function Apply() {
                       4
                     </div>
                     <div>
-                      <h4 className="text-sm font-semibold text-slate-200">Code Sandbox Test</h4>
-                      <p className="text-xs text-slate-450 mt-0.5">Personalized testing environments built in React and Python generated for sandbox review.</p>
+                      <h4 className="text-sm font-semibold text-zinc-400">Code Sandbox Test</h4>
+                      <p className="text-xs text-zinc-400 mt-0.5">Personalized testing environments built in React and Python generated for sandbox review.</p>
                     </div>
                   </div>
                 </div>
@@ -485,10 +485,10 @@ export default function Apply() {
                   <div className="absolute inset-0 rounded-full border-4 border-indigo-500/10 border-t-indigo-500 animate-spin" />
                   {/* Glowing core */}
                   <div className="absolute inset-2 bg-gradient-to-tr from-indigo-500 to-violet-500 rounded-full blur-[4px] opacity-10" />
-                  <span className="text-xl font-bold text-slate-100 z-10">{uploadProgress}%</span>
+                  <span className="text-xl font-bold text-zinc-400 z-10">{uploadProgress}%</span>
                 </div>
-                <h3 className="text-lg font-bold text-slate-100 mb-2">Ingesting CV & Initiating Pipelines</h3>
-                <p className="text-slate-450 text-xs max-w-xs text-center leading-relaxed">
+                <h3 className="text-lg font-bold text-zinc-400 mb-2">Ingesting CV & Initiating Pipelines</h3>
+                <p className="text-zinc-400 text-xs max-w-xs text-center leading-relaxed">
                   Uploading files to database repository. Our LLM will process the document text shortly.
                 </p>
               </div>
@@ -497,22 +497,22 @@ export default function Apply() {
             {/* Step: Tracking - Show Real-Time Pipeline Status Rows & Pulses */}
             {step === 'tracking' && (
               <div className="space-y-6">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+                <div className="flex items-center justify-between border-b border-zinc-800 pb-4 mb-4">
                   <div className="flex items-center gap-2">
                     <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-ping" />
-                    <h3 className="text-lg font-bold text-slate-100 tracking-wide">Live Pipeline Ingestion</h3>
+                    <h3 className="text-lg font-bold text-zinc-400 tracking-wide">Live Pipeline Ingestion</h3>
                   </div>
                   <StatusPill status={candidateStatus?.status} size="md" />
                 </div>
 
                 {/* Screening score (macro metric block) */}
                 {candidateStatus?.screeningScore > 0 && (
-                  <div className="p-6 bg-[#1A1A2E]/50 border border-slate-800 rounded-xl flex items-center justify-between shadow-[0_0_20px_rgba(99,102,241,0.03)] animate-slide-up">
+                  <div className="p-6 bg-zinc-900/50 border border-zinc-800 rounded-xl flex items-center justify-between shadow-sm animate-slide-up">
                     <div>
-                      <p className="text-xs text-slate-400 uppercase font-semibold tracking-wider">AI Evaluation Score</p>
+                      <p className="text-xs text-zinc-400 uppercase font-semibold tracking-wider">AI Evaluation Score</p>
                       <p className="text-3xl font-extrabold text-indigo-400 mt-1">
                         {Math.round(candidateStatus.screeningScore)}
-                        <span className="text-slate-500 text-sm font-normal"> / 100</span>
+                        <span className="text-zinc-400 text-sm font-normal"> / 100</span>
                       </p>
                     </div>
                     <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-xl">
@@ -538,13 +538,13 @@ export default function Apply() {
                               ? 'bg-indigo-500/20 border-indigo-500 text-indigo-400'
                               : isFailed && idx > currentIdx
                               ? 'bg-red-500/15 border-red-500/30 text-red-500/60'
-                              : 'bg-[#16213E] border-slate-800 text-slate-550'
+                              : 'bg-zinc-800 border-zinc-800 text-zinc-400'
                           } ${isCurrent ? 'ring-4 ring-indigo-500/10 animate-pulse' : ''}`}
                         >
                           {pStep.icon}
                         </div>
                         <div className="pt-2">
-                          <h4 className={`text-sm font-semibold transition-colors duration-300 ${isComplete ? 'text-slate-200' : 'text-slate-500'}`}>
+                          <h4 className={`text-sm font-semibold transition-colors duration-300 ${isComplete ? 'text-zinc-400' : 'text-zinc-400'}`}>
                             {pStep.label}
                           </h4>
                           {isCurrent && (
@@ -558,18 +558,18 @@ export default function Apply() {
 
                 {/* Failed Panel */}
                 {candidateStatus?.status === 'AI_SCREENING_FAILED' && (
-                  <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-center shadow-[0_0_15px_rgba(239,68,68,0.05)]">
+                  <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-center shadow-sm">
                     <p className="text-red-400 font-semibold text-sm">Pipeline Concluded</p>
-                    <p className="text-slate-400 text-xs mt-1 leading-relaxed">
+                    <p className="text-zinc-400 text-xs mt-1 leading-relaxed">
                       Unfortunately, your profile did not match the required screening parameters for this role.
                     </p>
                   </div>
                 )}
 
                 {(candidateStatus?.status === 'PARSE_FAILED' || candidateStatus?.status === 'PROCESSING_FAILED') && (
-                  <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-center shadow-[0_0_15px_rgba(251,191,36,0.05)]">
+                  <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-center shadow-sm">
                     <p className="text-amber-400 font-semibold text-sm">Processing Error</p>
-                    <p className="text-slate-400 text-xs mt-1 leading-relaxed">
+                    <p className="text-zinc-400 text-xs mt-1 leading-relaxed">
                       There was an error processing your CV. Please try submitting again or contact support.
                     </p>
                   </div>
@@ -577,7 +577,7 @@ export default function Apply() {
 
                 {/* Assessment Launch Call To Action */}
                 {candidateStatus?.status === 'ASSESSMENT_SENT' && candidateStatus.assessmentToken && (
-                  <div className="mt-6 text-center shadow-[0_0_20px_rgba(99,102,241,0.1)]">
+                  <div className="mt-6 text-center shadow-sm">
                     <Link
                       to={`/assessment/${candidateStatus.assessmentToken}`}
                       className="block w-full text-center bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-medium py-3 rounded-lg text-sm transition-all shadow-md animate-pulse cursor-pointer"
@@ -593,7 +593,7 @@ export default function Apply() {
         </div>
 
         {/* Footer Login Navigation */}
-        <p className="text-center text-slate-550 text-xs mt-10">
+        <p className="text-center text-zinc-400 text-xs mt-10">
           HR Management Access?{' '}
           <Link to="/login" className="text-indigo-400 hover:text-indigo-300 transition-colors font-medium">
             Log in to Dashboard

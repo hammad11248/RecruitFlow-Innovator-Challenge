@@ -30,11 +30,11 @@ export function Navbar() {
     `px-3 py-2 rounded-lg text-sm font-medium transition-all ${
       isActive
         ? 'text-indigo-400 bg-indigo-500/10 font-semibold'
-        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+        : 'text-zinc-400 hover:text-zinc-400 hover:bg-slate-900'
     }`
 
   return (
-    <header className="border-b border-slate-900 bg-slate-950/80 backdrop-blur sticky top-0 z-50">
+    <header className="border-b border-zinc-800 bg-slate-950/80 backdrop-blur sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Left: Logo and Links */}
         <div className="flex items-center gap-8">
@@ -42,7 +42,7 @@ export function Navbar() {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-500 to-violet-500 flex items-center justify-center font-bold text-white text-sm shadow-md shadow-indigo-500/20">
               RF
             </div>
-            <span className="font-bold text-slate-200 text-lg">RecruitFlow</span>
+            <span className="font-bold text-zinc-400 text-lg">RecruitFlow</span>
           </NavLink>
 
           <nav className="hidden md:flex items-center gap-2">
@@ -58,13 +58,13 @@ export function Navbar() {
         {/* Right: Auth status / Actions */}
         <div className="flex items-center gap-4">
           {user && (
-            <span className="text-xs text-slate-400 hidden sm:inline-block max-w-[150px] truncate">
+            <span className="text-xs text-zinc-400 hidden sm:inline-block max-w-[150px] truncate">
               {user.email}
             </span>
           )}
           <button
             onClick={handleAuthClick}
-            className="px-4 py-1.5 rounded-lg text-sm font-medium bg-slate-900 border border-slate-800 text-slate-300 hover:text-slate-100 hover:bg-slate-800 hover:border-slate-700 transition-all cursor-pointer"
+            className="px-4 py-1.5 rounded-lg text-sm font-medium bg-slate-900 border border-zinc-800 text-zinc-400 hover:text-zinc-400 hover:bg-slate-800 hover:border-zinc-800 transition-all cursor-pointer"
           >
             {user ? 'Sign Out' : 'Sign In'}
           </button>
@@ -76,7 +76,7 @@ export function Navbar() {
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
+    <div className="page-container font-sans">
       <Navbar />
       <Routes>
         <Route path="/" element={<Apply />} />
