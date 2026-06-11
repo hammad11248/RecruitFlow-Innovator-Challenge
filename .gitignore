@@ -71,4 +71,5 @@ celerybeat.pid
 
 # --- Test data ---
 test_cv.pdf
-resumes/
+resumes/*
+!resumes/samples/
