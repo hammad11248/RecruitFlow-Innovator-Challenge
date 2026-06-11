@@ -48,7 +48,7 @@ async def create_candidate(candidate_id: str, data: dict[str, Any]) -> str:
         {"state": "UPLOADED", "timestamp": datetime.utcnow(), "meta": {}}
     ]
     ref = db.collection(CANDIDATES_COL).document(candidate_id)
-    await _run_sync(ref.set, data)
+    await _run_sync(ref.set, data, merge=True)
     return candidate_id
 
 

@@ -9,7 +9,7 @@ import asyncio
 from functools import partial
 from typing import Optional
 
-from backend.firebase_admin_init import bucket
+from backend.firebase_admin_init import bucket, db
 
 
 async def _run_sync(func, *args, **kwargs):
@@ -25,27 +25,50 @@ def _upload_cv_sync(
     content_type: str = "application/pdf",
 ) -> tuple[str, str]:
     """
-    Upload CV file bytes to Firebase Storage.
+    Upload CV file bytes to Firebase Storage, or fallback to Firestore if Storage is unavailable/disabled.
     Returns (storage_path, download_url).
     """
-    storage_path = f"cvs/{candidate_id}/{filename}"
-    blob = bucket.blob(storage_path)
-    blob.upload_from_string(file_bytes, content_type=content_type)
+    import base64
+    import logging
+    
+    # Store base64 data to candidates document in Firestore as backup/fallback.
+    # This ensures everything works on the free Spark plan without upgrading to Blaze.
     try:
-        blob.make_public()
-        download_url = blob.public_url
+        cv_base64 = base64.b64encode(file_bytes).decode("utf-8")
+        ref = db.collection("candidates").document(candidate_id)
+        ref.set({
+            "cvBase64": cv_base64,
+            "cvFilename": filename,
+            "cvContentType": content_type
+        }, merge=True)
     except Exception as e:
-        # If bucket has Uniform Bucket-Level Access, make_public() fails.
-        # Generate a signed URL with a long expiration (e.g. 7 days or 365 days) instead.
-        import datetime as dt
+        logging.getLogger(__name__).warning(f"Failed to write fallback CV base64 to Firestore: {e}")
+
+    # Try uploading to Firebase Storage if bucket is configured
+    if bucket is not None:
         try:
-            download_url = blob.generate_signed_url(
-                expiration=dt.timedelta(days=365),
-                method="GET",
-            )
-        except Exception:
-            # Fallback to public URL without make_public
-            download_url = blob.public_url
+            storage_path = f"cvs/{candidate_id}/{filename}"
+            blob = bucket.blob(storage_path)
+            blob.upload_from_string(file_bytes, content_type=content_type)
+            try:
+                blob.make_public()
+                download_url = blob.public_url
+            except Exception:
+                import datetime as dt
+                try:
+                    download_url = blob.generate_signed_url(
+                        expiration=dt.timedelta(days=365),
+                        method="GET",
+                    )
+                except Exception:
+                    download_url = blob.public_url
+            return storage_path, download_url
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Firebase Storage upload failed: {e}. Falling back to Firestore storage.")
+
+    # Return database fallback URLs
+    storage_path = f"db://candidates/{candidate_id}"
+    download_url = f"/api/candidates/{candidate_id}/cv"
     return storage_path, download_url
 
 
@@ -56,7 +79,7 @@ async def upload_cv(
     content_type: str = "application/pdf",
 ) -> tuple[str, str]:
     """
-    Async wrapper: Upload CV to Firebase Storage at cvs/{candidateId}/{filename}.
+    Async wrapper: Upload CV to Firebase Storage or database fallback.
     Returns (storage_path, download_url).
     """
     return await _run_sync(
@@ -65,14 +88,21 @@ async def upload_cv(
 
 
 def _get_download_url_sync(storage_path: str) -> str:
-    """Generate a signed download URL for a file in Firebase Storage."""
+    """Generate a signed download URL or return database route if using fallback."""
+    if storage_path.startswith("db://"):
+        candidate_id = storage_path.split("/")[-1]
+        return f"/api/candidates/{candidate_id}/cv"
+        
     import datetime as dt
     blob = bucket.blob(storage_path)
-    url = blob.generate_signed_url(
-        expiration=dt.timedelta(hours=24),
-        method="GET",
-    )
-    return url
+    try:
+        url = blob.generate_signed_url(
+            expiration=dt.timedelta(hours=24),
+            method="GET",
+        )
+        return url
+    except Exception:
+        return blob.public_url
 
 
 async def get_download_url(storage_path: str) -> str:
@@ -81,20 +111,30 @@ async def get_download_url(storage_path: str) -> str:
 
 
 def _download_cv_sync(storage_path: str) -> bytes:
-    """Download a file from Firebase Storage as bytes."""
+    """Download a file from Firebase Storage or database fallback as bytes."""
+    if storage_path.startswith("db://"):
+        candidate_id = storage_path.split("/")[-1]
+        doc_ref = db.collection("candidates").document(candidate_id)
+        doc = doc_ref.get()
+        if doc.exists:
+            data = doc.to_dict() or {}
+            if "cvBase64" in data:
+                import base64
+                return base64.b64decode(data["cvBase64"])
+        raise ValueError(f"CV file not found in database for candidate {candidate_id}")
+        
     blob = bucket.blob(storage_path)
     return blob.download_as_bytes()
 
 
 async def download_cv(storage_path: str) -> bytes:
-    """Async wrapper: Download CV file bytes from Firebase Storage."""
+    """Async wrapper: Download CV file bytes."""
     return await _run_sync(_download_cv_sync, storage_path)
 
 
 def sync_download_cv(storage_path: str) -> bytes:
     """Synchronous download for Celery tasks."""
-    blob = bucket.blob(storage_path)
-    return blob.download_as_bytes()
+    return _download_cv_sync(storage_path)
 
 
 def sync_upload_cv(
@@ -110,6 +150,7 @@ def sync_upload_cv(
 def sync_get_download_url(storage_path: str) -> str:
     """Synchronous URL generation for Celery tasks."""
     return _get_download_url_sync(storage_path)
+
 
 
 def get_file_extension(filename: str) -> str:

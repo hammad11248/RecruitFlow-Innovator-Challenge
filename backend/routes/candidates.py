@@ -140,6 +140,29 @@ async def get_candidate(candidate_id: str, user: dict = Depends(verify_firebase_
     return candidate
 
 
+@router.get("/candidates/{candidate_id}/cv")
+async def download_candidate_cv(candidate_id: str):
+    """Fetch CV file directly from Firestore and return it as a binary download."""
+    candidate = await firestore_service.get_candidate(candidate_id)
+    if not candidate or "cvBase64" not in candidate:
+        raise HTTPException(status_code=404, detail="CV file not found or not stored in database")
+    
+    import base64
+    from fastapi.responses import Response
+    
+    try:
+        file_bytes = base64.b64decode(candidate["cvBase64"])
+        filename = candidate.get("cvFilename", "cv.pdf")
+        content_type = candidate.get("cvContentType", "application/pdf")
+        
+        headers = {
+            "Content-Disposition": f"attachment; filename=\"{filename}\""
+        }
+        return Response(content=file_bytes, media_type=content_type, headers=headers)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to decode CV: {e}")
+
+
 # ---------------------------------------------------------------------------
 # GET /api/candidate/lookup
 # ---------------------------------------------------------------------------
