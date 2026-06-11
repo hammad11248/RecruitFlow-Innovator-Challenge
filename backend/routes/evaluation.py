@@ -257,8 +257,6 @@ async def get_hr_leaderboard(
         "sortBy": sort_by,
         "sortDir": sort_dir,
     }
-
-
 @router.get("/hr/candidate/{candidate_id}/drill-down")
 async def get_hr_candidate_drilldown(
     candidate_id: str,
@@ -273,4 +271,13 @@ async def get_hr_candidate_drilldown(
     if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not found")
 
-    return _build_hr_drilldown_view(candidate)
+    drilldown_view = _build_hr_drilldown_view(candidate)
+    
+    # Fetch assessment document if candidate has an assessmentToken
+    token = candidate.get("assessmentToken")
+    if token:
+        assessment = await firestore_service.get_assessment(token)
+        if assessment:
+            drilldown_view["assessment"] = assessment
+            
+    return drilldown_view

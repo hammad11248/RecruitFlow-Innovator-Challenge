@@ -890,9 +890,10 @@ export default function HrDashboard() {
               {[
                 { id: 'overview', label: 'Overview' },
                 { id: 'dimensions', label: 'Dimensions' },
+                selectedCandidate?.assessment && { id: 'assessment', label: 'Assessment' },
                 { id: 'profile', label: 'Profile' },
                 { id: 'timeline', label: 'Timeline' },
-              ].map((tab) => (
+              ].filter(Boolean).map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setDrawerTab(tab.id)}
@@ -1033,6 +1034,91 @@ export default function HrDashboard() {
                           <span>View Submitted Resume</span>
                         </a>
                       )}
+                    </div>
+                  )}
+
+                  {/* ASSESSMENT TAB */}
+                  {drawerTab === 'assessment' && selectedCandidate?.assessment && (
+                    <div className="space-y-6 animate-fade-in text-slate-200">
+                      {/* Overall Assessment Score Summary */}
+                      <div className="p-5 bg-[#16213E]/50 border border-slate-850 rounded-xl flex items-center justify-between shadow-[0_0_15px_rgba(99,102,241,0.03)]">
+                        <div>
+                          <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Assessment Status</p>
+                          <p className={`text-xs font-bold mt-1 ${selectedCandidate.assessment.passed ? 'text-emerald-400' : 'text-amber-400'}`}>
+                            {selectedCandidate.assessment.passed ? '✓ PASSED' : '⏱ EVALUATED / NOT PASSED'}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Assessment Score</p>
+                          <p className="text-2xl font-extrabold text-indigo-400 mt-0.5">
+                            {Math.round(selectedCandidate.assessment.score || 0)}
+                            <span className="text-slate-500 text-xs font-normal"> / 100</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Question Breakdown List */}
+                      <div className="space-y-4">
+                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Question Breakdown</h4>
+                        {selectedCandidate.assessment.questions?.map((q, idx) => {
+                          const ansEntry = selectedCandidate.assessment.answers?.find(a => (a.questionId === q.id || a.question_id === q.id));
+                          const scoreEntry = selectedCandidate.assessment.scoreBreakdown?.find(sb => (sb.questionId === q.id || sb.question_id === q.id));
+
+                          return (
+                            <div key={q.id} className="p-4 bg-[#16213E]/20 border border-slate-850 rounded-xl space-y-3">
+                              {/* Header: Question Number and Type */}
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="text-slate-200 font-bold">
+                                  Q{idx + 1}: {q.type === 'mcq' ? '📝 Multiple Choice' : q.type === 'coding' ? '💻 Coding' : '📖 Open-Ended'}
+                                </span>
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                  (scoreEntry?.score || 0) >= 70 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/15' :
+                                  (scoreEntry?.score || 0) >= 40 ? 'bg-amber-500/10 text-amber-400 border border-amber-500/15' :
+                                  'bg-red-500/10 text-red-400 border border-red-500/15'
+                                }`}>
+                                  Score: {Math.round(scoreEntry?.score || 0)}/100
+                                </span>
+                              </div>
+
+                              {/* Question Prompt */}
+                              <p className="text-xs text-slate-350 leading-relaxed font-medium">
+                                {q.prompt}
+                              </p>
+
+                              {/* Candidate Answer */}
+                              <div className="bg-slate-950/40 border border-slate-900 rounded-lg p-3 space-y-1">
+                                <p className="text-[9px] text-slate-500 uppercase font-bold tracking-wider">Submitted Answer</p>
+                                {q.type === 'coding' ? (
+                                  <pre className="text-[11px] font-mono text-cyan-400 whitespace-pre-wrap overflow-x-auto leading-normal bg-slate-950/60 p-2.5 rounded border border-slate-900">
+                                    {ansEntry?.answer || '# No code submitted'}
+                                  </pre>
+                                ) : (
+                                  <p className="text-xs text-slate-200 leading-normal font-semibold">
+                                    {ansEntry?.answer || 'No answer submitted'}
+                                  </p>
+                                )}
+                              </div>
+
+                              {/* Correct Answer for MCQ */}
+                              {q.type === 'mcq' && q.correctAnswer && (
+                                <p className="text-[10px] text-slate-455 font-medium">
+                                  Correct Option: <span className="text-emerald-400 font-bold">{q.correctAnswer}</span>
+                                </p>
+                              )}
+
+                              {/* Evaluation Feedback */}
+                              {scoreEntry?.feedback && (
+                                <div className="border-t border-slate-850/60 pt-2.5">
+                                  <p className="text-[9px] text-indigo-400 uppercase font-bold tracking-wider mb-1">AI Evaluation Remarks</p>
+                                  <p className="text-xs text-slate-400 leading-relaxed">
+                                    {scoreEntry.feedback}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
 

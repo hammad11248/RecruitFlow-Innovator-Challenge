@@ -27,6 +27,14 @@ export default function DrillDownDrawer({ candidate, open, onClose }) {
 
   if (!candidate) return null
 
+  const tabs = [
+    { key: 'overview', label: 'Overview', icon: '📋' },
+    { key: 'dimensions', label: 'Dimensions', icon: '📊' },
+    candidate.assessment && { key: 'assessment', label: 'Assessment', icon: '📝' },
+    { key: 'profile', label: 'Profile', icon: '👤' },
+    { key: 'timeline', label: 'Timeline', icon: '📅' },
+  ].filter(Boolean)
+
   const dims = candidate.scoreDimensions || {}
   const stateHistory = candidate.stateHistory || []
   const parsedJson = candidate.parsedJson || {}
@@ -97,7 +105,7 @@ export default function DrillDownDrawer({ candidate, open, onClose }) {
 
           {/* Tab navigation */}
           <div className="flex items-center gap-1 mt-4 -mb-6 pb-0">
-            {TABS.map((tab) => (
+            {tabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
@@ -208,6 +216,91 @@ export default function DrillDownDrawer({ candidate, open, onClose }) {
                     )}
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* === ASSESSMENT TAB === */}
+          {activeTab === 'assessment' && candidate.assessment && (
+            <div className="space-y-6 animate-fade-in text-slate-200">
+              {/* Overall Assessment Score Summary */}
+              <div className="p-5 bg-surface-800/40 border border-surface-700/30 rounded-xl flex items-center justify-between shadow-[0_0_15px_rgba(99,102,241,0.03)]">
+                <div>
+                  <p className="text-[10px] text-surface-500 uppercase font-bold tracking-wider">Assessment Status</p>
+                  <p className={`text-xs font-bold mt-1 ${candidate.assessment.passed ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {candidate.assessment.passed ? '✓ PASSED' : '⏱ EVALUATED / NOT PASSED'}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] text-surface-500 uppercase font-bold tracking-wider">Assessment Score</p>
+                  <p className="text-2xl font-extrabold text-primary-400 mt-0.5">
+                    {Math.round(candidate.assessment.score || 0)}
+                    <span className="text-surface-500 text-xs font-normal"> / 100</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Question Breakdown List */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold text-surface-400 uppercase tracking-wider">Question Breakdown</h4>
+                {candidate.assessment.questions?.map((q, idx) => {
+                  const ansEntry = candidate.assessment.answers?.find(a => (a.questionId === q.id || a.question_id === q.id));
+                  const scoreEntry = candidate.assessment.scoreBreakdown?.find(sb => (sb.questionId === q.id || sb.question_id === q.id));
+
+                  return (
+                    <div key={q.id} className="p-4 bg-surface-800/20 border border-surface-700/30 rounded-xl space-y-3">
+                      {/* Header: Question Number and Type */}
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-surface-200 font-bold">
+                          Q{idx + 1}: {q.type === 'mcq' ? '📝 Multiple Choice' : q.type === 'coding' ? '💻 Coding' : '📖 Open-Ended'}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          (scoreEntry?.score || 0) >= 70 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/15' :
+                          (scoreEntry?.score || 0) >= 40 ? 'bg-amber-500/10 text-amber-400 border border-amber-500/15' :
+                          'bg-red-500/10 text-red-400 border border-red-500/15'
+                        }`}>
+                          Score: {Math.round(scoreEntry?.score || 0)}/100
+                        </span>
+                      </div>
+
+                      {/* Question Prompt */}
+                      <p className="text-xs text-surface-350 leading-relaxed font-medium">
+                        {q.prompt}
+                      </p>
+
+                      {/* Candidate Answer */}
+                      <div className="bg-surface-950/40 border border-surface-800 rounded-lg p-3 space-y-1">
+                        <p className="text-[9px] text-surface-500 uppercase font-bold tracking-wider">Submitted Answer</p>
+                        {q.type === 'coding' ? (
+                          <pre className="text-[11px] font-mono text-cyan-400 whitespace-pre-wrap overflow-x-auto leading-normal bg-surface-950/60 p-2.5 rounded border border-surface-800">
+                            {ansEntry?.answer || '# No code submitted'}
+                          </pre>
+                        ) : (
+                          <p className="text-xs text-surface-200 leading-normal font-semibold">
+                            {ansEntry?.answer || 'No answer submitted'}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Correct Answer for MCQ */}
+                      {q.type === 'mcq' && q.correctAnswer && (
+                        <p className="text-[10px] text-surface-450 font-medium">
+                          Correct Option: <span className="text-emerald-400 font-bold">{q.correctAnswer}</span>
+                        </p>
+                      )}
+
+                      {/* Evaluation Feedback */}
+                      {scoreEntry?.feedback && (
+                        <div className="border-t border-surface-800/60 pt-2.5">
+                          <p className="text-[9px] text-primary-400 uppercase font-bold tracking-wider mb-1">AI Evaluation Remarks</p>
+                          <p className="text-xs text-surface-400 leading-relaxed">
+                            {scoreEntry.feedback}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

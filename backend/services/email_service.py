@@ -20,13 +20,21 @@ def send_email(recipient_email: str, subject: str, body: str) -> bool:
     Send an email using Gmail SMTP and standard libraries.
     Accepts recipient_email, subject, and body to keep compatible with existing Celery tasks.
     """
-    if not settings.is_email_configured:
+    from backend.firebase_admin_init import MOCK_MODE
+    if MOCK_MODE or not settings.is_email_configured:
         logger.warning(f"[EMAIL MOCK] Sending email to: {recipient_email} | Subject: '{subject}'")
         body_text = body.replace("<br>", "\n").replace("<p>", "\n").strip()
         import re
         body_clean = re.sub('<[^<]+?>', '', body_text)
         preview = "\n".join([line.strip() for line in body_clean.split("\n") if line.strip()][:15])
         logger.warning(f"[EMAIL MOCK] Content:\n---\n{preview}\n---")
+        
+        # Extract and print all URLs so they are clickable and copyable in mock mode
+        urls = re.findall(r'href=["\'](https?://[^"\']+)["\']', body)
+        if urls:
+            logger.warning(f"[EMAIL MOCK] Extracted Links:")
+            for url in urls:
+                logger.warning(f"  - {url}")
         return True
 
     # Setup the MIME message
