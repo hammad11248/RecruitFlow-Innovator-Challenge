@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { storage, db, ref, uploadBytesResumable, getDownloadURL, doc, onSnapshot } from '../firebase'
 import client from '../api/client'
 import StatusPill from '../components/StatusPill'
-import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, User, Mail, Phone, Briefcase, Sparkles, ChevronRight, Zap, Lock, UserCheck, ShieldAlert } from 'lucide-react'
-import { useAuth } from '../hooks/useAuth'
+import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, User, Mail, Phone, Sparkles, Zap } from 'lucide-react'
 
 const PIPELINE_STEPS = [
   { key: 'UPLOADED', label: 'Uploaded', icon: '📄' },
@@ -17,8 +15,6 @@ const PIPELINE_STEPS = [
 ]
 
 export default function Apply() {
-  const { user, loading: authLoadingState, login } = useAuth()
-  
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -30,18 +26,10 @@ export default function Apply() {
   const [candidateId, setCandidateId] = useState(null)
   const [candidateStatus, setCandidateStatus] = useState(null)
   const [error, setError] = useState('')
-  const [step, setStep] = useState('auth') // auth | form | uploading | tracking
+  const [step, setStep] = useState('form') // form | uploading | tracking
   const [dragActive, setDragActive] = useState(false)
 
-  // Candidate Authentication states
-  const [authMode, setAuthMode] = useState('login') // login | register
-  const [authEmail, setAuthEmail] = useState('')
-  const [authPassword, setAuthPassword] = useState('')
-  const [authError, setAuthError] = useState('')
-  const [authLoading, setAuthLoading] = useState(false)
-
   // Tracking Lookup states
-  const [mode, setMode] = useState('apply') // apply | track
   const [lookupEmail, setLookupEmail] = useState('')
   const [lookupLoading, setLookupLoading] = useState(false)
   const [lookupError, setLookupError] = useState('')
@@ -84,67 +72,6 @@ export default function Apply() {
       clearInterval(interval)
     }
   }, [candidateId])
-
-  // Handle candidate authentication state and lookup
-  useEffect(() => {
-    if (authLoadingState) return
-
-    const role = localStorage.getItem('user_role')
-    if (user && user.email && role === 'candidate') {
-      setLookupLoading(true)
-      client.get(`/candidate/lookup?email=${encodeURIComponent(user.email)}`)
-        .then((res) => {
-          if (res.data?.candidateId) {
-            setCandidateId(res.data.candidateId)
-            setStep('tracking')
-          } else {
-            setEmail(user.email)
-            setStep('form')
-          }
-        })
-        .catch((err) => {
-          setEmail(user.email)
-          setStep('form')
-        })
-        .finally(() => {
-          setLookupLoading(false)
-        })
-    } else {
-      setStep('auth')
-    }
-  }, [user, authLoadingState])
-
-  const handleAuthSubmit = async (e) => {
-    e.preventDefault()
-    setAuthError('')
-    setAuthLoading(true)
-    try {
-      if (authMode === 'register') {
-        // Sign up on backend
-        await client.post('/auth/signup', { 
-          email: authEmail, 
-          password: authPassword, 
-          role: 'candidate' 
-        })
-      }
-      // Log in
-      await login(authEmail, authPassword)
-      localStorage.setItem('user_role', 'candidate')
-    } catch (err) {
-      console.error("Candidate auth error:", err)
-      const errorMessages = {
-        'auth/user-not-found': 'No account found with this email.',
-        'auth/wrong-password': 'Incorrect password. Please try again.',
-        'auth/invalid-email': 'Please enter a valid email address.',
-        'auth/too-many-requests': 'Too many attempts. Please try again later.',
-        'auth/invalid-credential': 'Invalid credentials. Please check details.',
-        'auth/email-already-in-use': 'This email address is already registered.'
-      }
-      setAuthError(errorMessages[err.code] || err.response?.data?.detail || err.message || 'Authentication failed. Please check details.')
-    } finally {
-      setAuthLoading(false)
-    }
-  }
 
   const handleDrag = (e) => {
     e.preventDefault()
@@ -296,106 +223,6 @@ export default function Apply() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* LEFT COLUMN: UPLOAD WORKFLOW */}
           <div className="lg:col-span-5 bg-[#1A1A2E]/40 backdrop-blur-xl border border-slate-800 rounded-xl p-6 md:p-8 shadow-[0_0_30px_rgba(99,102,241,0.05)]">
-            {step === 'auth' && (
-              <div className="space-y-6">
-                <div className="border-b border-slate-800 pb-4 mb-4">
-                  <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-                    <User className="w-5 h-5 text-indigo-400" />
-                    Candidate Portal
-                  </h2>
-                  <p className="text-xs text-slate-450 mt-1">Sign in or register to submit your CV and track evaluations in real-time.</p>
-                </div>
-
-                {/* Mode Selector Tabs */}
-                <div className="flex border-b border-slate-800 pb-2 mb-6">
-                  <button
-                    onClick={() => { setAuthMode('login'); setAuthError(''); }}
-                    type="button"
-                    className={`flex-1 text-center pb-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                      authMode === 'login'
-                        ? 'text-indigo-400 border-b-2 border-indigo-500 font-extrabold'
-                        : 'text-slate-550 hover:text-slate-350'
-                    }`}
-                  >
-                    Sign In
-                  </button>
-                  <button
-                    onClick={() => { setAuthMode('register'); setAuthError(''); }}
-                    type="button"
-                    className={`flex-1 text-center pb-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                      authMode === 'register'
-                        ? 'text-indigo-400 border-b-2 border-indigo-500 font-extrabold'
-                        : 'text-slate-550 hover:text-slate-350'
-                    }`}
-                  >
-                    Register Account
-                  </button>
-                </div>
-
-                <form onSubmit={handleAuthSubmit} className="space-y-6">
-                  {authError && (
-                    <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 animate-fade-in">
-                      <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
-                      <span className="text-red-300 text-xs font-medium">{authError}</span>
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                      Email Address
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                        <Mail className="w-4 h-4" />
-                      </div>
-                      <input
-                        type="email"
-                        value={authEmail}
-                        onChange={(e) => setAuthEmail(e.target.value)}
-                        placeholder="candidate@example.com"
-                        required
-                        className="block w-full pl-10 pr-4 py-3 bg-[#16213E]/50 border border-slate-800 focus:border-indigo-500 rounded-lg text-slate-200 outline-none text-sm placeholder-slate-650 transition-all focus:ring-1 focus:ring-indigo-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                      Password
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                        <Lock className="w-4 h-4" />
-                      </div>
-                      <input
-                        type="password"
-                        value={authPassword}
-                        onChange={(e) => setAuthPassword(e.target.value)}
-                        placeholder="••••••••"
-                        required
-                        className="block w-full pl-10 pr-4 py-3 bg-[#16213E]/50 border border-slate-800 focus:border-indigo-500 rounded-lg text-slate-200 outline-none text-sm placeholder-slate-650 transition-all focus:ring-1 focus:ring-indigo-500"
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={authLoading}
-                    className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:opacity-50 text-white font-medium rounded-lg py-3 text-sm transition-all shadow-lg hover:shadow-indigo-500/20 flex items-center justify-center gap-2 cursor-pointer border border-transparent"
-                  >
-                    {authLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>{authMode === 'login' ? 'Logging in...' : 'Creating account...'}</span>
-                      </>
-                    ) : (
-                      authMode === 'login' ? 'Sign In to Portal' : 'Register & Continue'
-                    )}
-                  </button>
-                </form>
-              </div>
-            )}
-
             {step === 'form' && (
               <div className="space-y-6">
                 <form onSubmit={handleSubmit} className="space-y-6" id="apply-form">
@@ -432,21 +259,22 @@ export default function Apply() {
                     </label>
                   </div>
 
-                  {/* Email Address (Pre-filled and read-only) */}
+                  {/* Email Address */}
                   <div className="space-y-2">
-                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                      Email Address (Authenticated)
+                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                      Email Address
                     </label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-650">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
                         <Mail className="w-4 h-4" />
                       </div>
                       <input
                         type="email"
                         value={email}
-                        disabled
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="you@example.com"
                         required
-                        className="block w-full pl-10 pr-4 py-3 bg-[#16213E]/20 border border-slate-900 rounded-lg text-slate-450 outline-none text-sm cursor-not-allowed"
+                        className="block w-full pl-10 pr-4 py-3 bg-[#16213E]/50 border border-slate-800 focus:border-indigo-500 rounded-lg text-slate-200 outline-none text-sm placeholder-slate-650 transition-all focus:ring-1 focus:ring-indigo-500"
                       />
                     </div>
                   </div>
@@ -699,7 +527,7 @@ export default function Apply() {
                     const currentIdx = getCurrentStepIndex()
                     const isComplete = idx <= currentIdx
                     const isCurrent = idx === currentIdx
-                    const isFailed = candidateStatus?.status === 'AI_SCREENING_FAILED' || candidateStatus?.status === 'REJECTED'
+                    const isFailed = candidateStatus?.status === 'AI_SCREENING_FAILED' || candidateStatus?.status === 'REJECTED' || candidateStatus?.status === 'PARSE_FAILED' || candidateStatus?.status === 'PROCESSING_FAILED'
 
                     return (
                       <div key={pStep.key} className="flex items-start gap-4 relative animate-fade-in">
@@ -734,6 +562,15 @@ export default function Apply() {
                     <p className="text-red-400 font-semibold text-sm">Pipeline Concluded</p>
                     <p className="text-slate-400 text-xs mt-1 leading-relaxed">
                       Unfortunately, your profile did not match the required screening parameters for this role.
+                    </p>
+                  </div>
+                )}
+
+                {(candidateStatus?.status === 'PARSE_FAILED' || candidateStatus?.status === 'PROCESSING_FAILED') && (
+                  <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-center shadow-[0_0_15px_rgba(251,191,36,0.05)]">
+                    <p className="text-amber-400 font-semibold text-sm">Processing Error</p>
+                    <p className="text-slate-400 text-xs mt-1 leading-relaxed">
+                      There was an error processing your CV. Please try submitting again or contact support.
                     </p>
                   </div>
                 )}

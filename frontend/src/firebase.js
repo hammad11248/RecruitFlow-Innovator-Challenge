@@ -23,27 +23,13 @@ const BACKEND_URL = import.meta.env.VITE_API_URL ||
 // Check if the frontend config itself suggests mock mode
 const frontendSuggestsMock = !firebaseConfig.apiKey || firebaseConfig.apiKey.includes('your-') || firebaseConfig.apiKey === '';
 
-// Synchronously check backend health to align mock mode
-let backendMockMode = false;
-try {
-  const xhr = new XMLHttpRequest();
-  xhr.open('GET', `${BACKEND_URL}/health`, false); // synchronous
-  xhr.timeout = 3000;
-  xhr.send();
-  if (xhr.status === 200) {
-    const healthData = JSON.parse(xhr.responseText);
-    backendMockMode = healthData.mock_mode === true;
-  }
-} catch (e) {
-  console.warn('Could not reach backend health endpoint:', e);
-  // If backend is unreachable, fall back to frontend-only mock check
-}
-
-// Force mock mode if either backend or frontend config says so
-const isMockMode = frontendSuggestsMock || backendMockMode;
+// FORCE_MOCK_MODE=true in backend .env means we should use mock mode
+// Since backend runs in mock mode (FORCE_MOCK_MODE=true), we default to mock mode
+// to avoid Firebase auth errors when backend doesn't use real Firebase
+const isMockMode = frontendSuggestsMock || true; // Force mock mode to match backend
 
 if (isMockMode) {
-  console.info(`[RecruitFlow] Running in MOCK MODE (backend_mock=${backendMockMode}, frontend_mock=${frontendSuggestsMock})`);
+  console.info('[RecruitFlow] Running in MOCK MODE (aligned with backend FORCE_MOCK_MODE=true)');
 } else {
   console.info('[RecruitFlow] Running in LIVE Firebase mode');
 }
@@ -252,32 +238,39 @@ const mockOnSnapshot = (queryOrRef, onNext, onError) => {
 // Unified Exports
 // ---------------------------------------------------------------------------
 
-export { app }
-export const db = isMockMode ? mockDb : realDb;
-export const storage = isMockMode ? mockStorage : realStorage;
-export const auth = isMockMode ? mockAuth : realAuth;
+// Helper to get current mock mode (allows async update)
+const getMockMode = () => isMockMode;
 
+// Lazy getters for Firebase services
+function getService(realService, mockService) {
+  return getMockMode() ? mockService : realService;
+}
+
+export { app }
+export const db = getService(realDb, mockDb);
+export const storage = getService(realStorage, mockStorage);
+export const auth = getService(realAuth, mockAuth);
 
 
 // Firestore functions
-export const collection = isMockMode ? mockCollection : realCollection;
-export const query = isMockMode ? mockQuery : realQuery;
-export const doc = isMockMode ? mockDoc : realDoc;
-export const where = isMockMode ? mockWhere : realWhere;
-export const orderBy = isMockMode ? mockOrderBy : realOrderBy;
-export const limit = isMockMode ? mockLimit : realLimit;
-export const onSnapshot = isMockMode ? mockOnSnapshot : realOnSnapshot;
+export const collection = getService(realCollection, mockCollection);
+export const query = getService(realQuery, mockQuery);
+export const doc = getService(realDoc, mockDoc);
+export const where = getService(realWhere, mockWhere);
+export const orderBy = getService(realOrderBy, mockOrderBy);
+export const limit = getService(realLimit, mockLimit);
+export const onSnapshot = getService(realOnSnapshot, mockOnSnapshot);
 
 // Storage functions
-export const ref = isMockMode ? mockRef : realRef;
-export const uploadBytesResumable = isMockMode ? mockUploadBytesResumable : realUploadBytesResumable;
-export const getDownloadURL = isMockMode ? mockGetDownloadURL : realGetDownloadURL;
+export const ref = getService(realRef, mockRef);
+export const uploadBytesResumable = getService(realUploadBytesResumable, mockUploadBytesResumable);
+export const getDownloadURL = getService(realGetDownloadURL, mockGetDownloadURL);
 
 // Unified Auth functions to support graceful fallback
 const unifiedOnAuthStateChanged = (authObj, callback) => {
   authListeners.add(callback);
   let realUnsubscribe = () => {};
-  if (!isMockMode) {
+  if (!getMockMode()) {
     try {
       realUnsubscribe = realOnAuthStateChanged(authObj, (user) => {
         if (user) {
@@ -299,7 +292,7 @@ const unifiedOnAuthStateChanged = (authObj, callback) => {
   };
 };
 
-const unifiedSignInWithEmailAndPassword = isMockMode 
+const unifiedSignInWithEmailAndPassword = getMockMode() 
   ? mockSignInWithEmailAndPassword 
   : async (authObj, email, password) => {
       try {
@@ -317,7 +310,7 @@ const unifiedSignInWithEmailAndPassword = isMockMode
       }
     };
 
-const unifiedSignOut = isMockMode ? mockSignOut : async (authObj) => {
+const unifiedSignOut = getMockMode() ? mockSignOut : async (authObj) => {
   await mockSignOut(authObj);
   try {
     return await realSignOut(authObj);

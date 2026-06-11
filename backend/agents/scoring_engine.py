@@ -69,8 +69,9 @@ def compute_technical_skills_score(
         exp.get("description", "") for exp in parsed_cv.get("experience", [])
     )
 
-    if not settings.is_gemini_configured:
-        logger.warning("Gemini API key is not set. Falling back to local keyword skills matching.")
+    from backend.firebase_admin_init import MOCK_MODE
+    if MOCK_MODE or not settings.is_gemini_configured:
+        logger.warning("Gemini API key is not set or mock mode. Falling back to local keyword skills matching.")
         # Perform manual exact/substring match
         total_weight = len(required_skills)
         matched_weight = 0.0
@@ -362,8 +363,9 @@ def compute_cv_quality_score(cv_text: str) -> float:
     Dimension 4: Claude evaluates CV quality holistically.
     Returns score 0-100.
     """
-    if not settings.is_gemini_configured:
-        logger.warning("Gemini API key is not set. Generating mock CV quality score.")
+    from backend.firebase_admin_init import MOCK_MODE
+    if MOCK_MODE or not settings.is_gemini_configured:
+        logger.warning("Gemini API key is not set or mock mode. Generating mock CV quality score.")
         # Calculate structured properties to make it deterministic
         text_len = len(cv_text)
         if text_len > 4000:
@@ -440,8 +442,9 @@ def compute_cultural_fit_score(
     Dimension 5: Claude compares candidate against the job's role persona.
     Returns score 0-100.
     """
-    if not settings.is_gemini_configured:
-        logger.warning("Gemini API key is not set. Generating mock cultural fit score.")
+    from backend.firebase_admin_init import MOCK_MODE
+    if MOCK_MODE or not settings.is_gemini_configured:
+        logger.warning("Gemini API key is not set or mock mode. Generating mock cultural fit score.")
         import random
         return float(random.randint(75, 92))
 

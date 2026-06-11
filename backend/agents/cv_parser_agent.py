@@ -12,7 +12,6 @@ import logging
 from typing import Any
 
 import google.generativeai as genai
-from docx import Document as DocxDocument
 
 from backend.config import settings
 from backend.services.storage_service import sync_download_cv
@@ -48,6 +47,7 @@ def _configure_gemini():
 
 def extract_text_from_docx(file_bytes: bytes) -> str:
     """Extract all text from a DOCX file using python-docx."""
+    from docx import Document as DocxDocument
     doc = DocxDocument(io.BytesIO(file_bytes))
     text_parts = []
     for paragraph in doc.paragraphs:
