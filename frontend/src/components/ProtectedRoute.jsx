@@ -1,7 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 
-export default function ProtectedRoute({ children, allowedRoles = ['recruiter', 'interviewer', 'hr_manager'] }) {
+export default function ProtectedRoute({ children, allowedRoles = ['hr'] }) {
   const { user, loading } = useAuth()
   const location = useLocation()
 

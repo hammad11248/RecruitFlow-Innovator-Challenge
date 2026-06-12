@@ -82,7 +82,7 @@ export default function App() {
         <Route
           path="/candidate/:candidateId"
           element={
-            <ProtectedRoute allowedRoles={['candidate', 'recruiter', 'interviewer', 'hr_manager']}>
+            <ProtectedRoute allowedRoles={['candidate', 'hr']}>
               <CandidatePortal />
             </ProtectedRoute>
           }
@@ -90,7 +90,7 @@ export default function App() {
         <Route
           path="/assessment/:token"
           element={
-            <ProtectedRoute allowedRoles={['candidate', 'recruiter', 'interviewer', 'hr_manager']}>
+            <ProtectedRoute allowedRoles={['candidate', 'hr']}>
               <Assessment />
             </ProtectedRoute>
           }
@@ -98,7 +98,7 @@ export default function App() {
         <Route
           path="/hr"
           element={
-            <ProtectedRoute allowedRoles={['recruiter', 'interviewer', 'hr_manager']}>
+            <ProtectedRoute allowedRoles={['hr']}>
               <HrDashboard />
             </ProtectedRoute>
           }
@@ -112,7 +112,7 @@ export default function App() {
         <Route
           path="/schedule"
           element={
-            <ProtectedRoute allowedRoles={['recruiter', 'interviewer', 'hr_manager']}>
+            <ProtectedRoute allowedRoles={['hr']}>
               <Schedule />
             </ProtectedRoute>
           }

@@ -44,7 +44,7 @@ async def submit_assessment(submission: AssessmentSubmission, user: dict = Depen
 
     role = user.get("role")
     email = user.get("email")
-    is_hr = role in ("recruiter", "interviewer", "hr_manager")
+    is_hr = role in ("hr", "recruiter", "interviewer", "hr_manager")
     is_self = email and candidate.get("email") and email.strip().lower() == candidate.get("email").strip().lower()
 
     if not (is_hr or is_self):
@@ -117,7 +117,7 @@ async def get_assessment(token: str, user: dict = Depends(verify_firebase_token)
 
     role = user.get("role")
     email = user.get("email")
-    is_hr = role in ("recruiter", "interviewer", "hr_manager")
+    is_hr = role in ("hr", "recruiter", "interviewer", "hr_manager")
     is_self = email and candidate.get("email") and email.strip().lower() == candidate.get("email").strip().lower()
 
     if not (is_hr or is_self):

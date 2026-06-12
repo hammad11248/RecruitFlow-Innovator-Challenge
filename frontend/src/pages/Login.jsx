@@ -8,7 +8,7 @@ export default function Login() {
   const [mode, setMode] = useState('login') // login | register
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState('recruiter')
+  const [role, setRole] = useState('hr')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const { login } = useAuth()
@@ -199,9 +199,7 @@ export default function Login() {
                     onChange={(e) => setRole(e.target.value)}
                     className="block w-full pl-10 pr-4 py-3 bg-zinc-800/50 border border-zinc-800 focus:border-indigo-500 rounded-lg text-zinc-400 outline-none text-sm placeholder-slate-650 transition-all focus:ring-1 focus:ring-indigo-500 appearance-none cursor-pointer"
                   >
-                    <option value="recruiter" className="bg-zinc-900">Recruiter</option>
-                    <option value="interviewer" className="bg-zinc-900">Interviewer</option>
-                    <option value="hr_manager" className="bg-zinc-900">HR Manager</option>
+                    <option value="hr" className="bg-zinc-900">HR Manager</option>
                     <option value="candidate" className="bg-zinc-900">Candidate</option>
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-zinc-400">

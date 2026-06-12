@@ -170,7 +170,7 @@ async def get_candidate_portal(candidate_id: str, user: dict = Depends(verify_fi
 
     role = user.get("role")
     email = user.get("email")
-    is_hr = role in ("recruiter", "interviewer", "hr_manager")
+    is_hr = role in ("hr", "recruiter", "interviewer", "hr_manager")
     is_self = email and candidate.get("email") and email.strip().lower() == candidate.get("email").strip().lower()
 
     if not (is_hr or is_self):

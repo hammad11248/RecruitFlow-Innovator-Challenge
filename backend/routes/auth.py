@@ -33,10 +33,13 @@ async def verify_firebase_token(
         # 1. Check if HR user exists
         hr_user = await firestore_service.get_hr_user_by_email(mock_email)
         if hr_user:
+            role = hr_user.get("role")
+            if role in ("recruiter", "interviewer", "hr_manager", "hr"):
+                role = "hr"
             return {
                 "uid": hr_user.get("uid"),
                 "email": mock_email,
-                "role": hr_user.get("role")
+                "role": role
             }
 
         # 2. Check if Candidate exists
@@ -52,7 +55,7 @@ async def verify_firebase_token(
         return {
             "uid": "mock-hr-uid",
             "email": mock_email,
-            "role": "recruiter"
+            "role": "hr"
         }
 
     try:
@@ -65,7 +68,11 @@ async def verify_firebase_token(
             if uid:
                 user_doc = await firestore_service.get_hr_user(uid)
                 if user_doc:
-                    decoded_token["role"] = user_doc.get("role")
+                    role = user_doc.get("role")
+                    if role in ("recruiter", "interviewer", "hr_manager", "hr"):
+                        decoded_token["role"] = "hr"
+                    else:
+                        decoded_token["role"] = role
                 elif email:
                     candidate = await firestore_service.get_candidate_by_email(email)
                     if candidate:
@@ -83,7 +90,7 @@ async def require_hr_user(
     user: Optional[dict] = Depends(verify_firebase_token)
 ) -> dict:
     """
-    Dependency that requires the user to be authenticated as an HR user (recruiter, interviewer, hr_manager).
+    Dependency that requires the user to be authenticated as an HR user (hr).
     """
     if not user:
         raise HTTPException(
@@ -93,7 +100,7 @@ async def require_hr_user(
         )
     
     role = user.get("role")
-    if role not in ("recruiter", "interviewer", "hr_manager"):
+    if role not in ("hr", "recruiter", "interviewer", "hr_manager"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"Access denied. Role '{role}' does not have HR administrative privileges.",
@@ -105,7 +112,11 @@ async def require_hr_user(
 async def signup_hr_user(user_data: dict):
     email = user_data.get("email")
     password = user_data.get("password")
-    role = user_data.get("role", "recruiter")
+    role = user_data.get("role", "hr")
+    
+    # Restrict roles strictly to 'candidate' or 'hr'
+    if role not in ("candidate", "hr"):
+        role = "hr"
     
     if not email or not password:
         raise HTTPException(status_code=400, detail="Email and password are required")
