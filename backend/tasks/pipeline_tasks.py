@@ -194,6 +194,9 @@ async def send_assessment_email_task(candidate_id: str) -> str:
         questions = _generate_assessment_questions(candidate, job)
 
         time_limit = 120
+        from datetime import timedelta
+        expiry_hours = settings.assessment_token_expiry_hours
+        expires_at = datetime.utcnow() + timedelta(hours=expiry_hours)
         assessment_data = {
             "token": assessment_token,
             "candidateId": candidate_id,
@@ -202,8 +205,10 @@ async def send_assessment_email_task(candidate_id: str) -> str:
             "answers": [],
             "score": 0,
             "passed": False,
+            "submitted": False,
             "scoreBreakdown": [],
             "timeLimitMinutes": time_limit,
+            "expiresAt": expires_at,
         }
 
         await create_assessment(assessment_token, assessment_data)
@@ -450,7 +455,11 @@ async def check_engagement_deadline_task() -> int:
         if job:
             deadline_hours = job.get("autoRejectDeadlineHours", 72)
 
-        hours_elapsed = (now - sent_at).total_seconds() / 3600
+        if getattr(sent_at, "tzinfo", None) is not None:
+            from datetime import timezone
+            hours_elapsed = (datetime.now(timezone.utc) - sent_at).total_seconds() / 3600
+        else:
+            hours_elapsed = (now - sent_at).total_seconds() / 3600
 
         if hours_elapsed > deadline_hours:
             candidate_id = candidate.get("id", "")

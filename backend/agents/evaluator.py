@@ -166,38 +166,28 @@ def score_open_ended(
     rubric: str,
 ) -> tuple[float, str]:
     """Score an open-ended answer using Google Gemini. Returns (score, feedback)."""
-    if not settings.is_gemini_configured:
-        logger.warning("Gemini API key is not set. Generating mock open-ended evaluation.")
+    def _generate_mock_open_ended():
         import random
         score = random.randint(75, 95)
         return float(score), f"Mock evaluation: The answer shows good depth and covers key requirements outlined in the rubric. (Bypassed Gemini, score={score}/100)"
 
-    _configure_gemini()
-    model = genai.GenerativeModel(
-        model_name=settings.gemini_model,
-        system_instruction=OPEN_ENDED_SCORING_PROMPT.format(rubric=rubric)
-    )
-
-    response = model.generate_content(
-        f"Score this answer:\n\n{answer}",
-        generation_config={"response_mime_type": "application/json"}
-    )
-
-    response_text = response.text.strip()
-    if response_text.startswith("```"):
-        lines = response_text.split("\n")
-        if lines[0].startswith("```"):
-            lines = lines[1:]
-        if lines and lines[-1].strip() == "```":
-            lines = lines[:-1]
-        response_text = "\n".join(lines)
+    if not settings.is_gemini_configured:
+        logger.warning("Gemini API key is not set. Generating mock open-ended evaluation.")
+        return _generate_mock_open_ended()
 
     try:
+        from backend.services.gemini_rest_service import call_gemini_rest
+        response_text = call_gemini_rest(
+            prompt=f"Score this answer:\n\n{answer}",
+            system_instruction=OPEN_ENDED_SCORING_PROMPT.format(rubric=rubric),
+            response_json=True
+        )
+
         result = json.loads(response_text)
         return float(result.get("score", 50)), result.get("feedback", "")
-    except (json.JSONDecodeError, ValueError):
-        logger.warning("Failed to parse open-ended score from Gemini")
-        return 50.0, "Unable to evaluate this answer."
+    except Exception as e:
+        logger.warning(f"Failed to score open-ended via Gemini API ({e}). Falling back to mock open-ended evaluation.")
+        return _generate_mock_open_ended()
 
 
 

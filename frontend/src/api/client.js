@@ -39,8 +39,12 @@ client.interceptors.request.use(async (config) => {
 client.interceptors.response.use(
   (response) => response,
   (error) => {
-    const isAuthEndpoint = error.config?.url?.includes('/auth/')
-    if (error.response?.status === 401 && !isAuthEndpoint) {
+    const url = error.config?.url || ''
+    const isAuthEndpoint = url.includes('/auth/')
+    const isAssessmentEndpoint = url.includes('/assessments/')
+    const isCandidatePortalEndpoint = url.includes('/candidate-portal/')
+    const skipRedirect = isAuthEndpoint || isAssessmentEndpoint || isCandidatePortalEndpoint
+    if (error.response?.status === 401 && !skipRedirect) {
       localStorage.removeItem('user_role')
       window.location.href = '/login'
     }

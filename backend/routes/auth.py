@@ -24,8 +24,8 @@ async def verify_firebase_token(
 
     token = credentials.credentials
     
-    # Check for Mock Mode or mock-prefixed tokens
-    if MOCK_MODE or token == "mock-token" or token.startswith("mock-"):
+    # Check for Mock Mode
+    if MOCK_MODE:
         mock_email = "hr@company.com"
         if token.startswith("mock-token:"):
             mock_email = token.split(":", 1)[1]
@@ -131,9 +131,10 @@ async def signup_hr_user(user_data: dict):
             # Set custom role claim in Firebase ID token
             auth.set_custom_user_claims(uid, {"role": role})
         except Exception as e:
-            # Fall back to mock mode if Firebase auth isn't configured
-            print(f"Firebase auth failed ({e}), falling back to mock mode")
-            uid = f"mock-uid-{uuid.uuid4().hex[:8]}"
+            raise HTTPException(
+                status_code=400,
+                detail=f"Firebase user creation failed: {str(e)}"
+            )
     
     profile_data = {
         "uid": uid,

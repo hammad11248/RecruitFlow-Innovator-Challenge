@@ -19,10 +19,10 @@ def send_email(recipient_email: str, subject: str, body: str) -> bool:
     """
     Send an email using Gmail SMTP and standard libraries.
     Accepts recipient_email, subject, and body to keep compatible with existing Celery tasks.
+    Only mocks when SMTP credentials are not configured (independent of Firestore MOCK_MODE).
     """
-    from backend.firebase_admin_init import MOCK_MODE
-    if MOCK_MODE or not settings.is_email_configured:
-        logger.warning(f"[EMAIL MOCK] Sending email to: {recipient_email} | Subject: '{subject}'")
+    if not settings.is_email_configured:
+        logger.warning(f"[EMAIL MOCK] Email credentials not configured. Mock-sending to: {recipient_email} | Subject: '{subject}'")
         body_text = body.replace("<br>", "\n").replace("<p>", "\n").strip()
         import re
         body_clean = re.sub('<[^<]+?>', '', body_text)

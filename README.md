@@ -238,7 +238,7 @@ RecruitFlow is configured as a unified Vercel monorepo. Both the frontend and ba
 4. Keep the **Root Directory** empty (Vercel will parse the root `vercel.json` file).
 5. Under **Environment Variables**, add the environment keys required by your backend:
    * `FIREBASE_SERVICE_ACCOUNT_JSON` (Paste the raw JSON string content of your private key `serviceAccountKey.json`).
-   * `FIREBASE_STORAGE_BUCKET` (e.g. `recruitflow-9f5a0.appspot.com`).
+   * `FIREBASE_STORAGE_BUCKET` (e.g. `your-project-id.appspot.com`).
    * `GEMINI_API_KEY`
    * `JWT_SECRET_KEY`
    * `EMAIL_USER` / `EMAIL_PASS` (Gmail SMTP credentials).

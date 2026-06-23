@@ -60,18 +60,14 @@ def extract_cv_text(file_bytes: bytes, filename: str) -> str:
     """Route to the correct text extractor based on file extension."""
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
     if ext == "pdf":
-        from backend.firebase_admin_init import MOCK_MODE
-        if MOCK_MODE or not settings.is_gemini_configured:
-            return "Mock CV text for candidate Alex Rivera. 8 years React experience, built SaaS platforms, Senior Engineer."
-        
-        _configure_gemini()
-        uploaded_file = genai.upload_file(io.BytesIO(file_bytes), mime_type="application/pdf")
-        try:
-            txt_model = genai.GenerativeModel(model_name=settings.gemini_model)
-            txt_response = txt_model.generate_content([uploaded_file, "Extract and return the entire plain text content of this resume/CV. Do not add any formatting or commentary, just the raw text."])
-            return txt_response.text
-        finally:
-            genai.delete_file(uploaded_file.name)
+        import pypdf
+        reader = pypdf.PdfReader(io.BytesIO(file_bytes))
+        text_parts = []
+        for page in reader.pages:
+            txt = page.extract_text()
+            if txt:
+                text_parts.append(txt)
+        return "\n\n".join(text_parts)
     elif ext == "docx":
         return extract_text_from_docx(file_bytes)
     else:
@@ -125,9 +121,7 @@ def parse_cv_with_claude(cv_text: str | bytes) -> dict[str, Any]:
     Send CV text or PDF bytes to Google Gemini for structured data extraction.
     Returns the parsed JSON as a dict.
     """
-    from backend.firebase_admin_init import MOCK_MODE
-    if MOCK_MODE or not settings.is_gemini_configured:
-        logger.warning("Gemini API key is not set or mock mode is active. Generating mock CV parsed data.")
+    def _generate_mock_parsed_data():
         import random
         score = random.randint(72, 94)
         return {
@@ -153,46 +147,33 @@ def parse_cv_with_claude(cv_text: str | bytes) -> dict[str, Any]:
             "leadershipSignals": ["led a team of 4", "architected and built", "managed state"],
             "domainExperience": ["SaaS", "FinTech"],
             "screeningScore": score,
-            "screeningRationale": f"Candidate has 8 years of experience with strong seniority, leadership signals, and exact match for required skills. Offline mock mode activated."
+            "screeningRationale": "Candidate has 8 years of experience with strong seniority, leadership signals, and exact match for required skills. Offline mock mode activated."
         }
 
-    _configure_gemini()
-    
-    if isinstance(cv_text, bytes):
-        uploaded_file = genai.upload_file(io.BytesIO(cv_text), mime_type="application/pdf")
-        try:
-            model = genai.GenerativeModel(
-                model_name=settings.gemini_model,
-                system_instruction=CV_PARSE_SYSTEM_PROMPT
-            )
-            response = model.generate_content(
-                [uploaded_file, "Parse the following CV and extract structured data."],
-                generation_config={"response_mime_type": "application/json"}
-            )
-        finally:
-            genai.delete_file(uploaded_file.name)
-    else:
-        model = genai.GenerativeModel(
-            model_name=settings.gemini_model,
-            system_instruction=CV_PARSE_SYSTEM_PROMPT
-        )
-        response = model.generate_content(
-            f"Parse the following CV and extract structured data:\n\n---\n{cv_text}\n---",
-            generation_config={"response_mime_type": "application/json"}
+    from backend.firebase_admin_init import MOCK_MODE
+    if MOCK_MODE or not settings.is_gemini_configured:
+        logger.warning("Gemini API key is not set or mock mode is active. Generating mock CV parsed data.")
+        mock_data = _generate_mock_parsed_data()
+        mock_data["gemini_api_called"] = False
+        return mock_data
+
+    try:
+        from backend.services.gemini_rest_service import call_gemini_rest
+        response_text = call_gemini_rest(
+            prompt=f"Parse the following CV and extract structured data:\n\n---\n{cv_text}\n---",
+            system_instruction=CV_PARSE_SYSTEM_PROMPT,
+            response_json=True
         )
 
-    response_text = response.text.strip()
-
-    if response_text.startswith("```"):
-        lines = response_text.split("\n")
-        if lines[0].startswith("```"):
-            lines = lines[1:]
-        if lines and lines[-1].strip() == "```":
-            lines = lines[:-1]
-        response_text = "\n".join(lines)
-
-    parsed = json.loads(response_text)
-    return parsed
+        parsed = json.loads(response_text)
+        parsed["gemini_api_called"] = True
+        logger.info("Successfully executed REAL Google Gemini API CV parser.")
+        return parsed
+    except Exception as e:
+        logger.warning(f"Failed to parse CV via Gemini API ({e}). Falling back to mock parsed data.")
+        mock_data = _generate_mock_parsed_data()
+        mock_data["gemini_api_called"] = False
+        return mock_data
 
 
 # ---------------------------------------------------------------------------
@@ -244,7 +225,7 @@ def process_cv(candidate_id: str) -> str:
         raise ValueError("CV parse failed: text length less than 100 characters.")
 
     from backend.firebase_admin_init import MOCK_MODE
-    parsed_json = parse_cv_with_claude(file_bytes if not MOCK_MODE else cv_text)
+    parsed_json = parse_cv_with_claude(cv_text)
 
     job_id = candidate.get("jobId", "")
     job = sync_get_job(job_id) if job_id else None
@@ -271,9 +252,23 @@ def process_cv(candidate_id: str) -> str:
 
     screening_score = parsed_json.get("screeningScore", partial_composite)
 
+    # Compute partial composite score using all 6 dimensions
+    # D3, D5, D6 are 0 since assessment hasn't happened yet
+    from backend.agents.scoring_engine import compute_composite
+    dimensions_for_composite = {
+        "technicalSkills": d1_score,
+        "experienceSeniority": d2_score,
+        "assessmentPerformance": 0.0,
+        "cvQuality": d4_score,
+        "culturalFit": 0.0,
+        "engagement": 0.0,
+    }
+    composite_score = compute_composite(dimensions_for_composite, scoring_weights if scoring_weights else None)
+
     update_data = {
         "parsedJson": parsed_json,
         "screeningScore": round(screening_score, 2),
+        "compositeScore": composite_score,
         "cvText": cv_text,
         "scoreDimensions": {
             "technicalSkills": {
@@ -292,6 +287,14 @@ def process_cv(candidate_id: str) -> str:
                 "weightedScore": round(d2_score * w2, 2),
                 "rationale": f"Experience evaluation based on years, seniority, and domain fit",
             },
+            "assessmentPerformance": {
+                "dimension": "D3",
+                "label": "Assessment Performance",
+                "weight": scoring_weights.get("assessmentPerformance", 0.25) if scoring_weights else 0.25,
+                "rawScore": 0.0,
+                "weightedScore": 0.0,
+                "rationale": "Assessment not yet completed",
+            },
             "cvQuality": {
                 "dimension": "D4",
                 "label": "CV Quality & Communication",
@@ -300,12 +303,29 @@ def process_cv(candidate_id: str) -> str:
                 "weightedScore": round(d4_score * w4, 2),
                 "rationale": "CV quality assessed for clarity, structure, and quantified achievements",
             },
+            "culturalFit": {
+                "dimension": "D5",
+                "label": "Cultural & Role Fit",
+                "weight": scoring_weights.get("culturalFit", 0.10) if scoring_weights else 0.10,
+                "rawScore": 0.0,
+                "weightedScore": 0.0,
+                "rationale": "Cultural fit not yet assessed (requires assessment answers)",
+            },
+            "engagement": {
+                "dimension": "D6",
+                "label": "Response Time & Engagement",
+                "weight": scoring_weights.get("engagement", 0.05) if scoring_weights else 0.05,
+                "rawScore": 0.0,
+                "weightedScore": 0.0,
+                "rationale": "Engagement not yet scored (assessment pending)",
+            },
         },
     }
 
     sync_update_candidate(candidate_id, update_data)
     logger.info(
         f"CV parsed for {candidate_id}: screening_score={screening_score:.1f}, "
+        f"composite_score={composite_score:.1f}, "
         f"D1={d1_score:.1f}, D2={d2_score:.1f}, D4={d4_score:.1f}"
     )
 

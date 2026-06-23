@@ -29,6 +29,26 @@ def _configure_gemini():
         _gemini_configured = True
 
 
+def _safe_diff_seconds(dt1: Any, dt2: Any) -> float:
+    """Safely subtract dt2 from dt1 and return difference in seconds, handling naive/aware datetimes and strings."""
+    if not dt1 or not dt2:
+        return 0.0
+    if isinstance(dt1, str):
+        dt1 = datetime.fromisoformat(dt1.replace("Z", "+00:00"))
+    if isinstance(dt2, str):
+        dt2 = datetime.fromisoformat(dt2.replace("Z", "+00:00"))
+    
+    # Make both naive UTC
+    if getattr(dt1, "tzinfo", None) is not None:
+        from datetime import timezone
+        dt1 = dt1.astimezone(timezone.utc).replace(tzinfo=None)
+    if getattr(dt2, "tzinfo", None) is not None:
+        from datetime import timezone
+        dt2 = dt2.astimezone(timezone.utc).replace(tzinfo=None)
+        
+    return (dt1 - dt2).total_seconds()
+
+
 # ---------------------------------------------------------------------------
 # Dimension 1 — Technical Skills Match (30%)
 # ---------------------------------------------------------------------------
@@ -54,7 +74,7 @@ def compute_technical_skills_score(
 ) -> float:
     """
     Dimension 1: Compare parsed CV technologies against job requirements.
-    Uses Claude for semantic and inferred matching.
+    Uses Gemini for semantic and inferred matching.
     Returns score 0-100.
     """
     if not job:
@@ -69,9 +89,7 @@ def compute_technical_skills_score(
         exp.get("description", "") for exp in parsed_cv.get("experience", [])
     )
 
-    from backend.firebase_admin_init import MOCK_MODE
-    if MOCK_MODE or not settings.is_gemini_configured:
-        logger.warning("Gemini API key is not set or mock mode. Falling back to local keyword skills matching.")
+    def _run_local_keyword_matching():
         # Perform manual exact/substring match
         total_weight = len(required_skills)
         matched_weight = 0.0
@@ -119,64 +137,56 @@ def compute_technical_skills_score(
         final_score = max(0, min(100, base_score - penalty))
         return round(final_score, 2)
 
-    _configure_gemini()
-    model = genai.GenerativeModel(
-        model_name=settings.gemini_model,
-        system_instruction=SEMANTIC_MATCH_PROMPT
-    )
-    response = model.generate_content(
-        (
-            f"Required skills: {json.dumps(required_skills)}\n\n"
-            f"Candidate skills: {json.dumps(candidate_skills)}\n\n"
-            f"Candidate experience: {experience_descriptions}"
-        ),
-        generation_config={"response_mime_type": "application/json"}
-    )
-
-    response_text = response.text.strip()
-    if response_text.startswith("```"):
-        lines = response_text.split("\n")
-        if lines[0].startswith("```"):
-            lines = lines[1:]
-        if lines and lines[-1].strip() == "```":
-            lines = lines[:-1]
-        response_text = "\n".join(lines)
+    from backend.firebase_admin_init import MOCK_MODE
+    if MOCK_MODE or not settings.is_gemini_configured:
+        logger.warning("Gemini API key is not set or mock mode. Falling back to local keyword skills matching.")
+        return _run_local_keyword_matching()
 
     try:
+        from backend.services.gemini_rest_service import call_gemini_rest
+        response_text = call_gemini_rest(
+            prompt=(
+                f"Required skills: {json.dumps(required_skills)}\n\n"
+                f"Candidate skills: {json.dumps(candidate_skills)}\n\n"
+                f"Candidate experience: {experience_descriptions}"
+            ),
+            system_instruction=SEMANTIC_MATCH_PROMPT,
+            response_json=True
+        )
+
         matches = json.loads(response_text)
-    except json.JSONDecodeError:
-        logger.warning("Failed to parse Gemini skill matching response")
-        return 50.0
+        match_weights = {"exact": 1.0, "semantic": 0.8, "inferred": 0.6, "none": 0.0}
 
-    match_weights = {"exact": 1.0, "semantic": 0.8, "inferred": 0.6, "none": 0.0}
+        total_weight = len(required_skills)
+        matched_weight = 0.0
 
-    total_weight = len(required_skills)
-    matched_weight = 0.0
-
-    for match in matches:
-        match_type = match.get("match_type", "none")
-        weight = match_weights.get(match_type, 0.0)
-        confidence = match.get("confidence", 1.0)
-        matched_weight += weight * confidence
-
-    base_score = (matched_weight / total_weight) * 100 if total_weight > 0 else 0
-
-    critical_skills = job.get("criticalSkills", [])
-    penalty = 0.0
-    for cs in critical_skills:
-        skill_name = cs.get("name", "") if isinstance(cs, dict) else cs
-        skill_penalty = cs.get("penalty", settings.critical_skill_penalty) if isinstance(cs, dict) else settings.critical_skill_penalty
-
-        found = False
         for match in matches:
-            if match.get("required", "").lower() == skill_name.lower() and match.get("match_type") != "none":
-                found = True
-                break
-        if not found:
-            penalty += skill_penalty
+            match_type = match.get("match_type", "none")
+            weight = match_weights.get(match_type, 0.0)
+            confidence = match.get("confidence", 1.0)
+            matched_weight += weight * confidence
 
-    final_score = max(0, min(100, base_score - penalty))
-    return round(final_score, 2)
+        base_score = (matched_weight / total_weight) * 100 if total_weight > 0 else 0
+
+        critical_skills = job.get("criticalSkills", [])
+        penalty = 0.0
+        for cs in critical_skills:
+            skill_name = cs.get("name", "") if isinstance(cs, dict) else cs
+            skill_penalty = cs.get("penalty", settings.critical_skill_penalty) if isinstance(cs, dict) else settings.critical_skill_penalty
+
+            found = False
+            for match in matches:
+                if match.get("required", "").lower() == skill_name.lower() and match.get("match_type") != "none":
+                    found = True
+                    break
+            if not found:
+                penalty += skill_penalty
+
+        final_score = max(0, min(100, base_score - penalty))
+        return round(final_score, 2)
+    except Exception as e:
+        logger.warning(f"Failed to perform semantic matching via Gemini API ({e}). Falling back to keyword skills matching.")
+        return _run_local_keyword_matching()
 
 
 
@@ -311,11 +321,7 @@ def compute_assessment_score(
     submitted_at = assessment.get("submittedAt")
     speed_bonus = 0
     if created_at and submitted_at:
-        if isinstance(created_at, str):
-            created_at = datetime.fromisoformat(created_at)
-        if isinstance(submitted_at, str):
-            submitted_at = datetime.fromisoformat(submitted_at)
-        elapsed_minutes = (submitted_at - created_at).total_seconds() / 60
+        elapsed_minutes = _safe_diff_seconds(submitted_at, created_at) / 60
         if elapsed_minutes < (time_limit_minutes * 0.5):
             speed_bonus = 5
 
@@ -363,9 +369,7 @@ def compute_cv_quality_score(cv_text: str) -> float:
     Dimension 4: Claude evaluates CV quality holistically.
     Returns score 0-100.
     """
-    from backend.firebase_admin_init import MOCK_MODE
-    if MOCK_MODE or not settings.is_gemini_configured:
-        logger.warning("Gemini API key is not set or mock mode. Generating mock CV quality score.")
+    def _generate_mock_cv_quality():
         # Calculate structured properties to make it deterministic
         text_len = len(cv_text)
         if text_len > 4000:
@@ -377,31 +381,24 @@ def compute_cv_quality_score(cv_text: str) -> float:
         else:
             return 45.0
 
-    _configure_gemini()
-    model = genai.GenerativeModel(
-        model_name=settings.gemini_model,
-        system_instruction=CV_QUALITY_PROMPT
-    )
-    response = model.generate_content(
-        f"Evaluate this CV:\n\n---\n{cv_text[:6000]}\n---",
-        generation_config={"response_mime_type": "application/json"}
-    )
-
-    response_text = response.text.strip()
-    if response_text.startswith("```"):
-        lines = response_text.split("\n")
-        if lines[0].startswith("```"):
-            lines = lines[1:]
-        if lines and lines[-1].strip() == "```":
-            lines = lines[:-1]
-        response_text = "\n".join(lines)
+    from backend.firebase_admin_init import MOCK_MODE
+    if MOCK_MODE or not settings.is_gemini_configured:
+        logger.warning("Gemini API key is not set or mock mode. Generating mock CV quality score.")
+        return _generate_mock_cv_quality()
 
     try:
+        from backend.services.gemini_rest_service import call_gemini_rest
+        response_text = call_gemini_rest(
+            prompt=f"Evaluate this CV:\n\n---\n{cv_text[:6000]}\n---",
+            system_instruction=CV_QUALITY_PROMPT,
+            response_json=True
+        )
+
         result = json.loads(response_text)
         return float(result.get("score", 50))
-    except (json.JSONDecodeError, ValueError):
-        logger.warning("Failed to parse CV quality score from Gemini")
-        return 50.0
+    except Exception as e:
+        logger.warning(f"Failed to score CV quality via Gemini API ({e}). Falling back to mock CV quality score.")
+        return _generate_mock_cv_quality()
 
 
 
@@ -442,47 +439,37 @@ def compute_cultural_fit_score(
     Dimension 5: Claude compares candidate against the job's role persona.
     Returns score 0-100.
     """
+    def _generate_mock_cultural_fit():
+        import random
+        return float(random.randint(75, 92))
+
     from backend.firebase_admin_init import MOCK_MODE
     if MOCK_MODE or not settings.is_gemini_configured:
         logger.warning("Gemini API key is not set or mock mode. Generating mock cultural fit score.")
-        import random
-        return float(random.randint(75, 92))
+        return _generate_mock_cultural_fit()
 
     if not role_persona_prompt:
         return 65.0
 
-    _configure_gemini()
-
-    answers_text = "\n".join(f"Answer {i+1}: {a}" for i, a in enumerate(open_ended_answers)) if open_ended_answers else "No open-ended answers available."
-
-    model = genai.GenerativeModel(
-        model_name=settings.gemini_model,
-        system_instruction=CULTURAL_FIT_PROMPT
-    )
-    response = model.generate_content(
-        (
-            f"ROLE PERSONA:\n{role_persona_prompt}\n\n"
-            f"CANDIDATE CV EXCERPT:\n{cv_text[:3000]}\n\n"
-            f"OPEN-ENDED ANSWERS:\n{answers_text}"
-        ),
-        generation_config={"response_mime_type": "application/json"}
-    )
-
-    response_text = response.text.strip()
-    if response_text.startswith("```"):
-        lines = response_text.split("\n")
-        if lines[0].startswith("```"):
-            lines = lines[1:]
-        if lines and lines[-1].strip() == "```":
-            lines = lines[:-1]
-        response_text = "\n".join(lines)
-
     try:
+        from backend.services.gemini_rest_service import call_gemini_rest
+        answers_text = "\n".join(f"Answer {i+1}: {a}" for i, a in enumerate(open_ended_answers)) if open_ended_answers else "No open-ended answers available."
+
+        response_text = call_gemini_rest(
+            prompt=(
+                f"ROLE PERSONA:\n{role_persona_prompt}\n\n"
+                f"CANDIDATE CV EXCERPT:\n{cv_text[:3000]}\n\n"
+                f"OPEN-ENDED ANSWERS:\n{answers_text}"
+            ),
+            system_instruction=CULTURAL_FIT_PROMPT,
+            response_json=True
+        )
+
         result = json.loads(response_text)
         return float(result.get("score", 50))
-    except (json.JSONDecodeError, ValueError):
-        logger.warning("Failed to parse cultural fit score from Gemini")
-        return 50.0
+    except Exception as e:
+        logger.warning(f"Failed to score cultural fit via Gemini API ({e}). Falling back to mock cultural fit score.")
+        return _generate_mock_cultural_fit()
 
 
 
@@ -501,12 +488,7 @@ def compute_engagement_score(
     if not sent_at or not submitted_at:
         return 0.0
 
-    if isinstance(sent_at, str):
-        sent_at = datetime.fromisoformat(sent_at)
-    if isinstance(submitted_at, str):
-        submitted_at = datetime.fromisoformat(submitted_at)
-
-    hours_elapsed = (submitted_at - sent_at).total_seconds() / 3600
+    hours_elapsed = _safe_diff_seconds(submitted_at, sent_at) / 3600
 
     if hours_elapsed < 24:
         return 100.0

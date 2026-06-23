@@ -132,7 +132,7 @@ async def list_candidates(
 # ---------------------------------------------------------------------------
 
 @router.get("/candidates/{candidate_id}")
-async def get_candidate(candidate_id: str, user: dict = Depends(verify_firebase_token)):
+async def get_candidate(candidate_id: str, user: dict = Depends(require_hr_user)):
     """Fetch full candidate document from Firestore."""
     candidate = await firestore_service.get_candidate(candidate_id)
     if not candidate:
@@ -141,7 +141,7 @@ async def get_candidate(candidate_id: str, user: dict = Depends(verify_firebase_
 
 
 @router.get("/candidates/{candidate_id}/cv")
-async def download_candidate_cv(candidate_id: str):
+async def download_candidate_cv(candidate_id: str, user: dict = Depends(require_hr_user)):
     """Fetch CV file directly from Firestore and return it as a binary download."""
     candidate = await firestore_service.get_candidate(candidate_id)
     if not candidate or "cvBase64" not in candidate:
@@ -264,6 +264,8 @@ async def bulk_import_candidates(candidates: list[BulkCandidateImport]):
     """
     from backend.firebase_admin_init import db
     
+    from backend.agents.scoring_engine import compute_composite
+
     mapped_candidates = {}
     for cand in candidates:
         scores = cand.scores or {}
@@ -274,12 +276,21 @@ async def bulk_import_candidates(candidates: list[BulkCandidateImport]):
         
         w1 = 0.30
         w2 = 0.20
+        w3 = 0.25
         w4 = 0.10
         w5 = 0.10
-        total_w = w1 + w2 + w4 + w5
-        partial_composite = 0.0
-        if total_w > 0:
-            partial_composite = (d1 * w1 + d2 * w2 + d4 * w4 + d5 * w5) / total_w
+        w6 = 0.05
+
+        # Use compute_composite for consistent scoring across all code paths
+        dimensions = {
+            "technicalSkills": d1,
+            "experienceSeniority": d2,
+            "assessmentPerformance": 0.0,
+            "cvQuality": d4,
+            "culturalFit": d5,
+            "engagement": 0.0,
+        }
+        composite = compute_composite(dimensions)
             
         candidate_data = {
             "name": cand.full_name,
@@ -288,8 +299,8 @@ async def bulk_import_candidates(candidates: list[BulkCandidateImport]):
             "jobId": cand.job_id,
             "status": cand.funnel_status,
             "cvText": cand.cv_text or "",
-            "screeningScore": round(partial_composite, 2),
-            "compositeScore": round(partial_composite, 2),
+            "screeningScore": round(composite, 2),
+            "compositeScore": round(composite, 2),
             "scoreDimensions": {
                 "technicalSkills": {
                     "dimension": "D1",
@@ -307,6 +318,14 @@ async def bulk_import_candidates(candidates: list[BulkCandidateImport]):
                     "weightedScore": round(d2 * w2, 2),
                     "rationale": "Imported via bulk import",
                 },
+                "assessmentPerformance": {
+                    "dimension": "D3",
+                    "label": "Assessment Performance",
+                    "weight": w3,
+                    "rawScore": 0.0,
+                    "weightedScore": 0.0,
+                    "rationale": "Not yet assessed (bulk import)",
+                },
                 "cvQuality": {
                     "dimension": "D4",
                     "label": "CV Quality & Communication",
@@ -322,7 +341,15 @@ async def bulk_import_candidates(candidates: list[BulkCandidateImport]):
                     "rawScore": d5,
                     "weightedScore": round(d5 * w5, 2),
                     "rationale": "Imported via bulk import",
-                }
+                },
+                "engagement": {
+                    "dimension": "D6",
+                    "label": "Response Time & Engagement",
+                    "weight": w6,
+                    "rawScore": 0.0,
+                    "weightedScore": 0.0,
+                    "rationale": "Not yet assessed (bulk import)",
+                },
             },
             "createdAt": datetime.utcnow(),
             "stateHistory": [

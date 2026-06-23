@@ -79,22 +79,8 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Apply />} />
         <Route path="/login" element={<Login />} />
-        <Route
-          path="/candidate/:candidateId"
-          element={
-            <ProtectedRoute allowedRoles={['candidate', 'hr']}>
-              <CandidatePortal />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/assessment/:token"
-          element={
-            <ProtectedRoute allowedRoles={['candidate', 'hr']}>
-              <Assessment />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/candidate/:candidateId" element={<CandidatePortal />} />
+        <Route path="/assessment/:token" element={<Assessment />} />
         <Route
           path="/hr"
           element={

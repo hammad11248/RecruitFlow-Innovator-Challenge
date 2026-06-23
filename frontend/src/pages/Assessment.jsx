@@ -22,8 +22,11 @@ export default function Assessment() {
     setTimeLeft(totalSeconds)
   }, [assessment])
 
+  const timerStarted = useRef(false)
+
   useEffect(() => {
-    if (timeLeft === null || timeLeft <= 0 || submitted) return
+    if (timeLeft === null || timeLeft <= 0 || submitted || timerStarted.current) return
+    timerStarted.current = true
 
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
@@ -37,7 +40,7 @@ export default function Assessment() {
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [timeLeft === null, submitted])
+  }, [timeLeft, submitted])
 
   const formatTime = (seconds) => {
     if (seconds === null) return '--:--'

@@ -170,6 +170,9 @@ def validate_cv_file(filename: str, file_size: int) -> Optional[str]:
     allowed_extensions = {"pdf", "docx"}
     max_size_mb = 50
 
+    if file_size == 0:
+        return "File is empty. Please upload a valid CV document."
+
     ext = get_file_extension(filename)
     if ext not in allowed_extensions:
         return f"Invalid file type '.{ext}'. Only PDF and DOCX files are accepted."

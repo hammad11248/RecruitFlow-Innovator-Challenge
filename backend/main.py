@@ -30,6 +30,13 @@ from backend.config import settings
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    # Configure logging for application loggers
+    import logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        stream=sys.stdout
+    )
     # Startup: Start task queue worker
     from backend.services.task_queue_service import start_worker, stop_worker
     start_worker()

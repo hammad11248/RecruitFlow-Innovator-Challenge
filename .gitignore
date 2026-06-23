@@ -1,75 +1,78 @@
-# ============================================================
-# RecruitFlow — .gitignore
-# ============================================================
-
-# --- Python ---
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-*.egg-info/
-dist/
-build/
-.eggs/
-*.egg
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-htmlcov/
-.coverage
-coverage.xml
-
-# --- Virtual environments & local Python runtimes ---
-venv/
-.venv/
-env/
-python312/
-*.pth
-
-# --- Environment & Secrets (NEVER commit these) ---
+# Environment & Secrets
 .env
 .env.local
+.env.production
 .env.*.local
-
-# --- Firebase Credentials (NEVER commit these) ---
 serviceAccountKey.json
 calendar_credentials.json
 *serviceAccount*.json
 *.json.key
 firebase-adminsdk*.json
 
-# --- Local mock database (runtime artifact) ---
-backend/mock_db.json
-backend/mock_storage/
-
-# --- Node.js ---
-node_modules/
-frontend/node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.eslintcache
-
-# --- Build outputs ---
-frontend/dist/
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
 dist/
-
-# --- IDE & OS ---
-.vscode/
-.idea/
-.gemini/
-Thumbs.db
-.DS_Store
-*.log
+build/
+*.so
+*$py.class
 *.swp
 *.swo
 
-# --- Celery & Redis ---
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+node_modules/
+.eslintcache
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+.gemini/
+
+# Local mock runtime databases
+backend/mock_db.json
+backend/backend/mock_db.json
+backend/mock_storage/
 celerybeat-schedule
 celerybeat.pid
 
-# --- Test data ---
+# Local python runtimes
+python312/
+*.pth
+
+# Test artifacts
+test_e2e.py
+test_*.py
+*_test.py
+test_exploit.py
+test_security_checks.py
+test_token.py
+test_create_user.py
+scratch/
 test_cv.pdf
 resumes/*
 !resumes/samples/
